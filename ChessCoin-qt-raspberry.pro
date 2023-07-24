@@ -15,7 +15,7 @@ greaterThan(QT_MAJOR_VERSION, 4) {
     DEFINES += QT_DEPRECATED_WARNINGS
 }
 
-DEFINES += LOCKMODE
+DEFINES += RASPBERRY LOCKMODE
 
 # for boost 1.37, add -mt to the boost libraries
 # use: qmake BOOST_LIB_SUFFIX=-mt
@@ -111,11 +111,7 @@ contains(BITCOIN_NEED_QT_PLUGINS, 1) {
     QTPLUGIN += qcncodecs qjpcodecs qtwcodecs qkrcodecs qtaccessiblewidgets
 }
 
-contains(USE_RASPBERRY, 1) {
-    message(Building with Raspberry support)
-    DEFINES += RASPBERRY
-    QTPLUGIN += qeglfs qlinuxfb qminimal qminimalegl qoffscreen qvnc qwebgl qxcb
-}
+#QTPLUGIN += qeglfs qlinuxfb qminimal qminimalegl qoffscreen qvnc qwebgl
 
 contains(USE_UPNP, 1) {
     message(Building with miniupnpc support)
@@ -145,8 +141,8 @@ contains(USE_IPV6, -) {
 }
 
 INCLUDEPATH += src/leveldb/include src/leveldb/helpers
-#LIBS += $$PWD/src/leveldb/libleveldb.a $$PWD/src/leveldb/libmemenv.a
-LIBS += $$PWD/src/leveldb/libleveldb.a
+LIBS += $$PWD/src/leveldb/libleveldb.a $$PWD/src/leveldb/libmemenv.a
+#LIBS += $$PWD/src/leveldb-rpi/libleveldb.a
 SOURCES += src/txdb-leveldb.cpp
 
 !win32 {
