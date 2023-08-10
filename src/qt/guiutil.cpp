@@ -485,7 +485,7 @@ HelpMessageBox::HelpMessageBox(QWidget *parent) :
         "  -min                   " + tr("Start minimized") + "\n" +
         "  -splash                " + tr("Show splash screen on startup (default: 1)") + "\n";
 
-    setWindowTitle(tr("ChessCoin-Qt"));
+    setWindowTitle(tr("ChessCoin 0.32% - Help"));
     setTextFormat(Qt::PlainText);
     // setMinimumWidth is ignored for QMessageBox so put in non-breaking spaces to make it wider.
     setText(header + QString(QChar(0x2003)).repeated(50));
@@ -588,6 +588,18 @@ QString formatDurationStr(int secs)
 
     return strList.join(" ");
 }
+
+QClickableLabel::QClickableLabel(QWidget *parent)
+    : QLabel(parent)
+{
+
+}
+
+void QClickableLabel::mouseReleaseEvent(QMouseEvent* event)
+{
+    emit clicked(event->pos());
+}
+
 
 } // namespace GUIUtil
 

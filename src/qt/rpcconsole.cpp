@@ -566,3 +566,8 @@ void RPCConsole::on_sldGraphRange_valueChanged(int value)
     int mins = value * multiplier;
     setTrafficGraphRange(mins);
 }
+
+void RPCConsole::setTabFocus(int tabType)
+{
+    ui->tabWidget->setCurrentIndex(tabType);
+}

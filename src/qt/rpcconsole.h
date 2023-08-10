@@ -18,7 +18,8 @@ public:
     explicit RPCConsole(QWidget *parent = 0);
     ~RPCConsole();
 
-    void setClientModel(ClientModel *model);
+    void setClientModel(ClientModel *model);    
+    void setTabFocus(int tabType);
 
     enum MessageClass {
         MC_ERROR,

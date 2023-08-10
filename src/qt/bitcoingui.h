@@ -5,6 +5,7 @@
 #include <QSystemTrayIcon>
 
 #include <stdint.h>
+#include "guiutil.h"
 
 class TransactionTableModel;
 class ClientModel;
@@ -71,9 +72,9 @@ private:
     SignVerifyMessageDialog *signVerifyMessageDialog;
 
     QLabel *labelEncryptionIcon;
-    QLabel *labelStakingIcon;
-    QLabel *labelConnectionsIcon;
-    QLabel *labelBlocksIcon;
+    GUIUtil::QClickableLabel *labelStakingIcon;
+    GUIUtil::QClickableLabel *labelConnectionsIcon;
+    GUIUtil::QClickableLabel *labelBlocksIcon;
     QLabel *progressBarLabel;
     QProgressBar *progressBar;
 
@@ -190,6 +191,8 @@ private slots:
 
     void updateWeight();
     void updateStakingIcon();
+
+    void showRPCConsoleDebug();
 };
 
 #endif

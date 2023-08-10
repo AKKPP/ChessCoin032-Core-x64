@@ -115,8 +115,8 @@ contains(BITCOIN_NEED_QT_PLUGINS, 1) {
 
 contains(USE_UPNP, 1) {
     message(Building with miniupnpc support)
-    INCLUDEPATHS += -I"/usr/include/miniupnpc"
-    MINIUPNPC_LIB_PATH=/usr/lib
+    INCLUDEPATHS += -I"/usr/local/include/miniupnpc"
+    MINIUPNPC_LIB_PATH=/usr/local/lib/aarch64-linux-gnu
     LIBS += $$join(MINIUPNPC_LIB_PATH,,-L,) -lminiupnpc
     win32:LIBS += -liphlpapi
     DEFS += -DSTATICLIB -DUSE_UPNP=$(USE_UPNP)
@@ -140,15 +140,14 @@ contains(USE_IPV6, -) {
     DEFINES += USE_IPV6=$$USE_IPV6
 }
 
-INCLUDEPATH += src/leveldb/include src/leveldb/helpers
-LIBS += $$PWD/src/leveldb/libleveldb.a $$PWD/src/leveldb/libmemenv.a
-#LIBS += $$PWD/src/leveldb-rpi/libleveldb.a
+INCLUDEPATH += src/leveldb-rpi/include src/leveldb-rpi/helpers
+LIBS += $$PWD/src/leveldb-rpi/libleveldb.a
 SOURCES += src/txdb-leveldb.cpp
 
 !win32 {
     # we use QMAKE_CXXFLAGS_RELEASE even without RELEASE=1 because we use RELEASE to indicate linking preferences not -O preferences
-    genleveldb.commands = cd $$PWD/src/leveldb && CC=$$QMAKE_CC CXX=$$QMAKE_CXX $(MAKE) OPT=\"$$QMAKE_CXXFLAGS $$QMAKE_CXXFLAGS_RELEASE\" libleveldb.a libmemenv.a
-} else {
+    genleveldb.commands = cd $$PWD/src/leveldb-rpi && CC=$$QMAKE_CC CXX=$$QMAKE_CXX $(MAKE) OPT=\"$$QMAKE_CXXFLAGS $$QMAKE_CXXFLAGS_RELEASE\" libleveldb.a
+	} else {
     # make an educated guess about what the ranlib command is called
     isEmpty(QMAKE_RANLIB) {
         QMAKE_RANLIB = $$replace(QMAKE_STRIP, strip, ranlib)
@@ -157,13 +156,13 @@ SOURCES += src/txdb-leveldb.cpp
     genleveldb.commands = cd $$PWD/src/leveldb && CC=$$QMAKE_CC CXX=$$QMAKE_CXX TARGET_OS=OS_WINDOWS_CROSSCOMPILE $(MAKE) OPT=\"$$QMAKE_CXXFLAGS $$QMAKE_CXXFLAGS_RELEASE\" libleveldb.a libmemenv.a && $$QMAKE_RANLIB $$PWD/src/leveldb/libleveldb.a && $$QMAKE_RANLIB $$PWD/src/leveldb/libmemenv.a
 }
 
-genleveldb.target = $$PWD/src/leveldb/libleveldb.a
+genleveldb.target = $$PWD/src/leveldb-rpi/libleveldb.a
 genleveldb.depends = FORCE
 
-#PRE_TARGETDEPS += $$PWD/src/leveldb/libleveldb.a
+#PRE_TARGETDEPS += $$PWD/src/leveldb-rpi/libleveldb.a
 #QMAKE_EXTRA_TARGETS += genleveldb
 ##Gross ugly hack that depends on qmake internals, unfortunately there is no other way to do it.
-#QMAKE_CLEAN += $$PWD/src/leveldb/libleveldb.a; cd $$PWD/src/leveldb ; $(MAKE) clean
+#QMAKE_CLEAN += $$PWD/src/leveldb-rpi/libleveldb.a; cd $$PWD/src/leveldb-rpi; $(MAKE) clean
 
 # regenerate src/build.h
 !windows|contains(USE_BUILD_INFO, 1) {

@@ -4,6 +4,8 @@
 #include <QString>
 #include <QObject>
 #include <QMessageBox>
+#include <QLabel>
+#include <QEvent>
 
 #include <boost/filesystem.hpp>
 
@@ -124,6 +126,24 @@ namespace GUIUtil
 
     /* Convert seconds into a QString with days, hours, mins, secs */
     QString formatDurationStr(int secs);
+
+    /* QClickableLabel */
+    class QClickableLabel : public QLabel
+    {
+        Q_OBJECT
+
+    public:
+        QClickableLabel(QWidget *parent = Q_NULLPTR);
+
+    signals:
+        /** Emitted when the label is clicked. The relative mouse coordinates of the click are
+         * passed to the signal.
+         */
+        void clicked(const QPoint& point);
+
+    protected:
+        void mouseReleaseEvent(QMouseEvent *event) override;
+    };
 
 } // namespace GUIUtil
 

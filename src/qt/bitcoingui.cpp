@@ -151,9 +151,9 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     frameBlocksLayout->setContentsMargins(3,0,3,0);
     frameBlocksLayout->setSpacing(3);
     labelEncryptionIcon = new QLabel();
-    labelStakingIcon = new QLabel();
-    labelConnectionsIcon = new QLabel();
-    labelBlocksIcon = new QLabel();
+    labelStakingIcon = new GUIUtil::QClickableLabel();
+    labelConnectionsIcon = new GUIUtil::QClickableLabel();
+    labelBlocksIcon = new GUIUtil::QClickableLabel();
     frameBlocksLayout->addStretch();
     frameBlocksLayout->addWidget(labelEncryptionIcon);
     frameBlocksLayout->addStretch();
@@ -163,6 +163,10 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     frameBlocksLayout->addStretch();
     frameBlocksLayout->addWidget(labelBlocksIcon);
     frameBlocksLayout->addStretch();
+
+    connect(labelStakingIcon, SIGNAL(clicked(QPoint)), this, SLOT(showRPCConsoleDebug()));
+    connect(labelConnectionsIcon, SIGNAL(clicked(QPoint)), this, SLOT(showRPCConsoleDebug()));
+    connect(labelBlocksIcon, SIGNAL(clicked(QPoint)), this, SLOT(showRPCConsoleDebug()));
 
     if (GetBoolArg("-staking", true))
     {
@@ -1036,5 +1040,14 @@ void BitcoinGUI::updateStakingIcon()
             labelStakingIcon->setToolTip(tr("Not staking because you don't have mature coins"));
         else
             labelStakingIcon->setToolTip(tr("Not staking"));
+    }
+}
+
+void BitcoinGUI::showRPCConsoleDebug()
+{
+    if (rpcConsole)
+    {
+        rpcConsole->show();
+        rpcConsole->setTabFocus(0);
     }
 }
