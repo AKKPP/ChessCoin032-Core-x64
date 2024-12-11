@@ -10,7 +10,9 @@
 #include "net.h"
 #include "script.h"
 #include "scrypt.h"
+#include "base58.h"
 #include "zerocoin/Zerocoin.h"
+#include "memusage.h"
 
 #include <list>
 
@@ -52,9 +54,10 @@ inline bool MoneyRange(int64_t nValue) { return (nValue >= 0 && nValue <= MAX_MO
 /** Threshold for nLockTime: below this value it is interpreted as block number, otherwise as UNIX timestamp. */
 static const unsigned int LOCKTIME_THRESHOLD = 500000000; // Tue Nov  5 00:53:20 1985 UTC
 
+static const int64_t MIN_TXOUT_AMOUNT = MIN_TX_FEE;
+
 // Maximum number of script-checking threads allowed
 static const int MAX_SCRIPTCHECK_THREADS = 16;
-
 static const int64_t COIN_YEAR_REWARD = 32 * CENT;
 static const int64_t COIN_YEAR_REWARDV2 = 0.32 * CENT;
 
@@ -148,10 +151,44 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CTransaction &tx,
                         bool* pfMissingInputs);
 
 
+//a burn tx requires atleast x >= 6 confirmations between it and the best block, BURN_MIN_CONFIMS must be > 0
+#define BURN_MIN_CONFIRMS  6
+#define BURN_HARDER_TARGET 0.5     //make the burn target 0.5 times the intermediate calculated target
 
+//keeps things safe
+#if BURN_MIN_CONFIRMS < 1
+#error BURN_MIN_CONFIRMS must be greater than or equal to 1
+#endif
 
+//Burn addresses
+const CBitcoinAddress burnOfficialAddress("CHESSCoinBurnNotSendMeDEV2WTYt9T6X");
 
+//The growth rate of the hash (2 ** (1 / BURN_HASH_DOUBLE)) rounded up,
+// do not change this without changing BURN_HASH_DOUBLE
+#define BURN_DECAY_RATE    1.00000198
 
+inline void GetBurnAddress(CBitcoinAddress &addressRet)
+{
+    addressRet = burnOfficialAddress;
+}
+
+//the burn address, when created, the constuctor automatically assigns its value
+class CBurnAddress : public CBitcoinAddress
+{
+public:
+
+    CBurnAddress()
+    {
+        GetBurnAddress(*this);
+    }
+};
+
+//if any == true, then compare address with both testnet and realnet burn addresses
+// else compare only with the address that corresponds to which network the client is connected to
+inline bool IsBurnAddress(const CBitcoinAddress &address)
+{
+    return address == burnOfficialAddress;
+}
 
 
 bool GetWalletFile(CWallet* pwallet, std::string &strWalletFileOut);
@@ -381,7 +418,7 @@ public:
         scriptPubKey.clear();
     }
 
-    bool IsNull()
+    bool IsNull() const
     {
         return (nValue == -1);
     }
@@ -571,6 +608,48 @@ public:
      */
     unsigned int GetP2SHSigOpCount(const MapPrevTx& mapInputs) const;
 
+    //Returns the pubKet of the first txIn of this tx
+     bool GetSendersPubKey(CScript &scriptPubKeyRet, bool fOurPubKey=false) const;
+
+     //return the index of a burn transaction in vout, -1 if not found
+     int32_t GetBurnOutTxIndex() const
+     {
+         //find the burnt transaction
+         CBurnAddress burnAddress;
+
+         uint32_t i;
+         for(i = 0; i < vout.size(); i++)
+         {
+             // CBitcoinAddress address;
+             // CTxDestination ctx_address = CTxDestination(address);
+             CTxDestination address;
+             if(!ExtractDestination(vout[i].scriptPubKey, address))
+                 continue;
+             /* FIXME: sanity check required */
+             if(address == burnAddress.Get())
+                 break;
+         }
+
+         //if i hit the end for the for loop, it means it found nothing so return -1
+         return i == vout.size() ? -1 : i;
+     }
+
+     bool IsBurnTx() const
+     {
+         return GetBurnOutTxIndex() == -1 ? false : true;
+     }
+
+     //if (return value).IsNull() == true, then some error occured
+     CTxOut GetBurnOutTx() const
+     {
+         int32_t burnTxOutIndex = GetBurnOutTxIndex();
+         if(burnTxOutIndex == -1)
+             return CTxOut(); //error
+
+         return vout[burnTxOutIndex];
+     }
+
+
     /** Amount of bitcoins spent by this transaction.
         @return sum of all outputs (note: does not include fees)
      */
@@ -716,6 +795,7 @@ bool IsStandardTx(const CTransaction& tx);
 
 bool IsFinalTx(const CTransaction &tx, int nBlockHeight = 0, int64_t nBlockTime = 0);
 
+uint64_t CalculateTxSize(const CTransaction& tx);
 
 
 /** A transaction with a merkle branch linking it to the block chain. */
@@ -1200,6 +1280,7 @@ public:
         nStakeModifier = 0;
         nStakeModifierChecksum = 0;
         hashProof = 0;
+
         if (block.IsProofOfStake())
         {
             SetProofOfStake();
@@ -1321,6 +1402,11 @@ public:
         nStakeModifier = nModifier;
         if (fGeneratedStakeModifier)
             nFlags |= BLOCK_STAKE_MODIFIER;
+    }
+
+    std::pair<COutPoint, uint32_t> GetProofOfStake() const
+    {
+        return std::make_pair(prevoutStake, nStakeTime);
     }
 
     std::string ToString() const
@@ -1584,6 +1670,7 @@ public:
     mutable CCriticalSection cs;
     std::map<uint256, CTransaction> mapTx;
     std::map<COutPoint, CInPoint> mapNextTx;
+    int64_t cachedInnerUsage = 0;
 
     bool addUnchecked(const uint256& hash, CTransaction &tx);
     bool remove(const CTransaction &tx, bool fRecursive = false);
@@ -1610,6 +1697,35 @@ public:
         if (i == mapTx.end()) return false;
         result = i->second;
         return true;
+    }
+
+    int64_t GetTotalTxSize() const
+    {
+        LOCK(cs);
+
+        int64_t totalTxSize = 0;
+
+        // Iterate over each transaction in the mempool
+        for (const auto& entry : mapTx)
+        {
+            // Add the size of each transaction to the total
+            totalTxSize += CalculateTxSize(entry.second);
+        }
+
+        return totalTxSize;
+    }
+
+    int64_t DynamicMemoryUsage() const
+    {
+        LOCK(cs);
+
+        int64_t mem = (int64_t)memusage::DynamicUsage(mapTx);     // Memory used by the map storing transactions
+
+        for (const auto& entry : mapTx)
+            mem += CalculateTxSize(entry.second);       // Add size of each transaction
+
+        mem += (int64_t)memusage::DynamicUsage(mapNextTx);
+        return mem;
     }
 };
 

@@ -11,9 +11,7 @@
 
 QString TransactionDesc::FormatTxStatus(const CWalletTx& wtx)
 {
-#ifdef LOCKMODE	
     AssertLockHeld(cs_main);
-#endif
     
     if (!IsFinalTx(wtx, nBestHeight + 1))
     {

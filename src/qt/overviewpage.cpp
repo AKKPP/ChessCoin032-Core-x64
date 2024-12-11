@@ -99,15 +99,30 @@ OverviewPage::OverviewPage(QWidget *parent) :
     txdelegate(new TxViewDelegate()),
     filter(0)
 {
-    setStyleSheet(QString("background-color: transparent;border: 0px;"));
+    setStyleSheet(QString("background-color: transparent; border: 0px;"));
 
     ui->setupUi(this);
+
+    QString tooltipStyle = "QToolTip { "
+                            "background-color: #346792; "
+                            "color: #FFFFFF; "
+                            "border: none; "
+                            "}";
+
+    ui->labelBalance->setStyleSheet(tooltipStyle);
+    ui->labelStake->setStyleSheet(tooltipStyle);
+    ui->labelUnconfirmed->setStyleSheet(tooltipStyle);
+    ui->labelImmature->setStyleSheet(tooltipStyle);
+    ui->labelTotal->setStyleSheet(tooltipStyle);
+    ui->labelWalletStatus->setStyleSheet(tooltipStyle);
+    ui->labelTransactionsStatus->setStyleSheet(tooltipStyle);
 
     // Recent transactions
     ui->listTransactions->setItemDelegate(txdelegate);
     ui->listTransactions->setIconSize(QSize(DECORATION_SIZE, DECORATION_SIZE));
     ui->listTransactions->setMinimumHeight(NUM_ITEMS * (DECORATION_SIZE + 2));
     ui->listTransactions->setAttribute(Qt::WA_MacShowFocusRect, false);
+    ui->listTransactions->setStyleSheet(tooltipStyle);
 
     connect(ui->listTransactions, SIGNAL(clicked(QModelIndex)), this, SLOT(handleTransactionClicked(QModelIndex)));
 

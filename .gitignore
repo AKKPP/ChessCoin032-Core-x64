@@ -3,6 +3,7 @@ src/chesscoin
 src/chesscoind
 src/test_chesscoin
 src/build.h
+src/qt/locale
 .*.swp
 *.*~*
 *.bak
@@ -24,3 +25,8 @@ qrc_*.cpp
 build
 
 !src/leveldb/Makefile
+
+Makefile.Debug
+Makefile.Release
+object_script.chesscoin-qt.Debug
+object_script.chesscoin-qt.Release

@@ -43,9 +43,11 @@ protected:
     /** Intercept focus-in event and ',' key presses */
     bool eventFilter(QObject *object, QEvent *event);
 
-private:
+public:
     QDoubleSpinBox *amount;
     QValueComboBox *unit;
+
+private:
     int currentUnit;
 
     void setText(const QString &text);

@@ -13,7 +13,9 @@
         <file alias="transaction_0">res/icons/transaction0.png</file>
         <file alias="transaction_confirmed">res/icons/transaction2.png</file>
         <file alias="transaction_conflicted">res/icons/transaction_conflicted.png</file>
-        <file alias="transaction_1">res/icons/clock1.png</file>
+        <file alias="transaction_offline">res/icons/transaction_offline.png</file>
+        <file alias="transaction_lock">res/icons/transaction_lock.png</file>
+		<file alias="transaction_1">res/icons/clock1.png</file>
         <file alias="transaction_2">res/icons/clock2.png</file>
         <file alias="transaction_3">res/icons/clock3.png</file>
         <file alias="transaction_4">res/icons/clock4.png</file>
@@ -43,8 +45,20 @@
         <file alias="debugwindow">res/icons/debugwindow.png</file>
         <file alias="staking_off">res/icons/staking_off.png</file>
         <file alias="staking_on">res/icons/staking_on.png</file>
-		<file alias="camera">res/icons/camera.png</file>
-    </qresource>
+        <file alias="camera">res/icons/camera.png</file>
+        <file alias="chess">res/icons/chess.png</file>
+        <file alias="download">res/icons/download.png</file>
+        <file alias="delete">res/icons/delete.png</file>
+        <file alias="clock">res/icons/clock.png</file>
+        <file alias="chat">res/icons/chat.png</file>
+		<file alias="connected">res/icons/connected.png</file>
+		<file alias="disconnected">res/icons/disconnected.png</file>
+		<file alias="sendchat">res/icons/sendchat.png</file>
+		<file alias="connect">res/icons/connect.png</file>	
+		<file alias="burn">res/icons/burn.png</file>
+		<file alias="up">res/icons/up.png</file>
+		<file alias="from">res/icons/from.png</file>
+	</qresource>
     <qresource prefix="/images">
         <file alias="about">res/images/about.png</file>
         <file alias="splash">res/images/splash3.png</file>

@@ -212,6 +212,25 @@
       </spacer>
      </item>
      <item>
+      <widget class="QComboBox" name="comboAddrType">
+       <item>
+        <property name="text">
+         <string>All addresses</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Sending addresses</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Receiving addresses</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
       <widget class="QDialogButtonBox" name="buttonBox">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Maximum" vsizetype="Fixed">

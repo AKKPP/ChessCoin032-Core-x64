@@ -6,6 +6,7 @@
 #include <QMessageBox>
 #include <QLabel>
 #include <QEvent>
+#include <QToolTip>
 
 #include <boost/filesystem.hpp>
 
@@ -16,7 +17,9 @@ class QWidget;
 class QDateTime;
 class QUrl;
 class QAbstractItemView;
+class QMainWindow;
 QT_END_NAMESPACE
+
 class SendCoinsRecipient;
 
 /** Utility functions used by the Bitcoin Qt UI.
@@ -104,6 +107,8 @@ namespace GUIUtil
     bool GetStartOnSystemStartup();
     bool SetStartOnSystemStartup(bool fAutoStart);
 
+    void handleCloseWindowShortcut(QWidget* w);
+
     /** Help message for Bitcoin-Qt, shown with --help. */
     class HelpMessageBox : public QMessageBox
     {
@@ -127,6 +132,9 @@ namespace GUIUtil
     /* Convert seconds into a QString with days, hours, mins, secs */
     QString formatDurationStr(int secs);
 
+    QString getNTPTime();
+    QString getNTPTimeForChatroom();
+
     /* QClickableLabel */
     class QClickableLabel : public QLabel
     {
@@ -143,6 +151,16 @@ namespace GUIUtil
 
     protected:
         void mouseReleaseEvent(QMouseEvent *event) override;
+    };
+
+    class QHoverLabel : public QClickableLabel
+    {
+    public:
+        QHoverLabel(QWidget *parent = Q_NULLPTR);
+
+    protected:
+        void enterEvent(QEvent *event) override;
+        void focusInEvent(QFocusEvent *event) override;
     };
 
 } // namespace GUIUtil

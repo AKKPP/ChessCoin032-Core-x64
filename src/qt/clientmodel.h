@@ -75,6 +75,7 @@ signals:
     void numConnectionsChanged(int count);
     void numBlocksChanged(int count, int countOfPeers);
     void bytesChanged(quint64 totalBytesIn, quint64 totalBytesOut);
+    void mempoolSizeChanged(quint64 count, quint64 mempoolSizeInBytes);
 
     //! Asynchronous error notification
     void error(const QString &title, const QString &message, bool modal);

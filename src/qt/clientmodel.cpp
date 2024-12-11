@@ -56,6 +56,7 @@ ClientModel::ClientModel(OptionsModel *optionsModel, QObject *parent) :
             emit numBlocksChanged(newNumBlocks, newNumBlocksOfPeers);
         }
 
+        emit mempoolSizeChanged((quint64)mempool.size(), (quint64)mempool.DynamicMemoryUsage());
         emit bytesChanged(getTotalBytesRecv(), getTotalBytesSent());
     });
     connect(pollThread, &QThread::finished, timer, &QObject::deleteLater);
@@ -237,7 +238,6 @@ static void NotifyBlocksChanged(ClientModel *clientmodel)
 {
     // This notification is too frequent. Don't trigger a signal.
     // Don't remove it, though, as it might be useful later.
-
 }
 
 static void NotifyNumConnectionsChanged(ClientModel *clientmodel, int newNumConnections)

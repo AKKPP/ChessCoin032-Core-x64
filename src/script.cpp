@@ -49,6 +49,7 @@ bool CastToBool(const valtype& vch)
             return true;
         }
     }
+
     return false;
 }
 
@@ -661,7 +662,6 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co
                     stack.insert(stack.end()-2, vch);
                 }
                 break;
-
 
                 //
                 // Splice ops
@@ -1694,6 +1694,7 @@ bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, const C
 
     if (!EvalScript(stack, scriptPubKey, txTo, nIn, nHashType))
         return false;
+
     if (stack.empty())
         return false;
 
@@ -1950,6 +1951,16 @@ unsigned int CScript::GetSigOpCount(const CScript& scriptSig) const
     /// ... and return its opcount:
     CScript subscript(data.begin(), data.end());
     return subscript.GetSigOpCount(true);
+}
+
+bool CScript::IsPayToPubKeyHash() const
+{
+    return (this->size() == 25 &&
+            this->at(0) == OP_DUP &&
+            this->at(1) == OP_HASH160 &&
+            this->at(2) == 0x14 &&
+            this->at(23) == OP_EQUALVERIFY &&
+            this->at(24) == OP_CHECKSIG);
 }
 
 bool CScript::IsPayToScriptHash() const

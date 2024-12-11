@@ -1,8 +1,8 @@
 TEMPLATE = app
 TARGET = chesscoin-qt
-VERSION = 1.4.5
+VERSION = 1.4.9
 INCLUDEPATH += src src/json src/qt
-DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
+DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE __STDC_FORMAT_MACROS __STDC_LIMIT_MACROS
 CONFIG += no_include_pwd
 CONFIG += thread
 CONFIG += static
@@ -15,7 +15,7 @@ greaterThan(QT_MAJOR_VERSION, 4) {
     DEFINES += QT_DEPRECATED_WARNINGS
 }
 
-DEFINES += RASPBERRY LOCKMODE
+DEFINES += RASPBERRY
 
 # for boost 1.37, add -mt to the boost libraries
 # use: qmake BOOST_LIB_SUFFIX=-mt
@@ -147,7 +147,7 @@ SOURCES += src/txdb-leveldb.cpp
 !win32 {
     # we use QMAKE_CXXFLAGS_RELEASE even without RELEASE=1 because we use RELEASE to indicate linking preferences not -O preferences
     genleveldb.commands = cd $$PWD/src/leveldb-rpi && CC=$$QMAKE_CC CXX=$$QMAKE_CXX $(MAKE) OPT=\"$$QMAKE_CXXFLAGS $$QMAKE_CXXFLAGS_RELEASE\" libleveldb.a
-	} else {
+} else {
     # make an educated guess about what the ranlib command is called
     isEmpty(QMAKE_RANLIB) {
         QMAKE_RANLIB = $$replace(QMAKE_STRIP, strip, ranlib)
@@ -194,7 +194,9 @@ QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Wno-ignored-qu
 # Input
 DEPENDPATH += src src/json src/qt
 HEADERS += src/qt/bitcoingui.h \
+    src/qt/exitwaitdialog.h \
     src/qt/intro.h \
+    src/qt/qutcdatetimeedit.h \
     src/qt/transactiontablemodel.h \
     src/qt/addresstablemodel.h \
     src/qt/optionsdialog.h \
@@ -285,8 +287,17 @@ HEADERS += src/qt/bitcoingui.h \
     src/netbase.h \
     src/clientversion.h \
     src/threadsafety.h \
+    src/checkqueue.h \
+    src/timestamps.h \
     src/qt/qtcamera.h \
-    src/qt/trafficgraphwidget.h
+    src/qt/trafficgraphwidget.h \
+    src/ntp.h \
+    src/qt/chatworker.h \
+    src/qt/chatwidget.h \
+    src/memusage.h \
+    src/qt/burncoinsentry.h \
+    src/qt/burncoinsdialog.h \
+	src/qt/sendtimelockdialog.h
 
 SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/intro.cpp \
@@ -352,6 +363,13 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/rpcconsole.cpp \
     src/qt/qtcamera.cpp \
     src/qt/trafficgraphwidget.cpp \
+    src/ntp.cpp \
+    src/qt/chatwidget.cpp \
+    src/qt/chatworker.cpp \
+    src/qt/burncoinsentry.cpp \
+    src/qt/burncoinsdialog.cpp \
+	src/qt/sendtimelockdialog.cpp \
+	src/qt/exitwaitdialog.cpp \
     src/noui.cpp \
     src/kernel.cpp \
     src/scrypt-arm.S \
@@ -375,10 +393,15 @@ RESOURCES += \
     src/qt/res/qdarkstyle/dark/darkstyle.qrc
 
 FORMS += \
+    src/qt/forms/burncoinsdialog.ui \
+    src/qt/forms/burncoinsentry.ui \
+    src/qt/forms/chatwidget.ui \
+    src/qt/forms/exitwaitdialog.ui \
     src/qt/forms/intro.ui \
     src/qt/forms/coincontroldialog.ui \
     src/qt/forms/sendcoinsdialog.ui \
     src/qt/forms/addressbookpage.ui \
+    src/qt/forms/sendtimelockdialog.ui \
     src/qt/forms/signverifymessagedialog.ui \
     src/qt/forms/aboutdialog.ui \
     src/qt/forms/editaddressdialog.ui \

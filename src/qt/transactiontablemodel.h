@@ -23,7 +23,10 @@ public:
         Date = 1,
         Type = 2,
         ToAddress = 3,
-        Amount = 4
+        Amount = 4,
+#ifdef Q_OS_MAC
+        Extra = 5,
+#endif
     };
 
     /** Roles to get specific information from a transaction row.

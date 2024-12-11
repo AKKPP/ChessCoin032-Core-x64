@@ -8,6 +8,7 @@
 #include "wallet.h"
 #include "db.h"
 #include "walletdb.h"
+#include "ntp.h"
 
 using namespace json_spirit;
 using namespace std;
@@ -223,4 +224,102 @@ Value getnetworkinfo(const Array& params, bool fHelp)
     result.push_back(Pair("localaddresses", localAddresses));
 
     return result;
+}
+
+Value getnetstat(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() > 0)
+        throw runtime_error(
+            "getnetstat\n"
+            "Returns information about network traffic, including bytes in, bytes out,\n"
+            "and current time.");
+
+    Object obj;
+    obj.push_back(Pair("totalbytesrecv", static_cast<uint64_t>(CNode::GetTotalBytesRecv())));
+    obj.push_back(Pair("totalbytessent", static_cast<uint64_t>(CNode::GetTotalBytesSent())));
+    obj.push_back(Pair("timemillis", static_cast<int64_t>(GetTimeMillis())));
+    return obj;
+}
+
+/*
+05:53:45 ntptime
+05:53:48
+{
+"epoch" : 1442494427,
+"time" : "2015-09-17 12:53:47 UTC"
+}
+
+05:53:56 ntptime time.windows.com
+05:53:57
+{
+"epoch" : 1442494436,
+"time" : "2015-09-17 12:53:56 UTC"
+}
+
+05:54:33 ntptime time-a.nist.gov
+05:54:34
+{
+"epoch" : 1442494473,
+"time" : "2015-09-17 12:54:33 UTC"
+}*/
+
+Value ntptime(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() > 1)
+        throw runtime_error(
+            "ntptime [ntpserver]\n"
+            "Returns current time from specific or random NTP server.");
+
+    int64_t nTime;
+    if (params.size() > 0) {
+        string strHostName = params[0].get_str();
+        nTime = NtpGetTime(strHostName);
+    }
+    else {
+        CNetAddr ip;
+        nTime = NtpGetTime(ip);
+    }
+
+    Object obj;
+    switch (nTime) {
+    case -1:
+        throw runtime_error("Socket initialization error");
+    case -2:
+        throw runtime_error("Switching socket mode to non-blocking failed");
+    case -3:
+        throw runtime_error("Unable to send data");
+    case -4:
+        throw runtime_error("Receive timed out");
+    default:
+        if (nTime > 0 && nTime != 2085978496) {
+            obj.push_back(Pair("epoch", nTime));
+            obj.push_back(Pair("time", DateTimeStrFormat(nTime)));
+        }
+        else throw runtime_error("Unexpected response");
+    }
+
+    return obj;
+}
+
+Value getmempoolinfo(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() > 0)
+    {
+        throw runtime_error(
+            "getmempoolinfo\n"
+            "Returns details on the active state of the TX memory pool.");
+    }
+
+    // Calculate the number of transactions in the mempool
+    int64_t mempoolTxCount = mempool.size();
+
+    // Initialize a variable to keep track of the total size
+    int64_t totalTxSize = mempool.GetTotalTxSize();
+
+    Object obj;
+    obj.push_back(Pair("size", mempoolTxCount));
+    obj.push_back(Pair("bytes", totalTxSize));
+    obj.push_back(Pair("usage", mempool.DynamicMemoryUsage()));
+
+    return obj;
 }

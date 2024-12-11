@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = chesscoin-qt
-VERSION = 1.4.5
+VERSION = 1.4.9
 INCLUDEPATH += src src/json src/qt
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
 CONFIG += no_include_pwd
@@ -15,7 +15,6 @@ greaterThan(QT_MAJOR_VERSION, 4) {
     DEFINES += QT_DEPRECATED_WARNINGS
 }
 
-DEFINES += LOCKMODE
 
 # for boost 1.37, add -mt to the boost libraries
 # use: qmake BOOST_LIB_SUFFIX=-mt
@@ -71,7 +70,7 @@ contains(DEBUG, 1) {
 !win32 {
 # for extra security against potential buffer overflows: enable GCCs Stack Smashing Protection
 QMAKE_CXXFLAGS *= -fstack-protector-all --param ssp-buffer-size=1
-QMAKE_LFLAGS *= -fstack-protector-all --param ssp-buffer-size=1
+QMAKE_LFLAGS *= -fstack-protector-all --param ssp-buffer-size=1  -no-pie
 # We need to exclude this for Windows cross compile with MinGW 4.2.x, as it will result in a non-working executable!
 # This can be enabled for Windows, when we switch to MinGW >= 4.4.x.
 }
@@ -86,7 +85,7 @@ win32:QMAKE_LFLAGS_RELEASE -= -Wl,-s
 
 ## Windows Debug help Bug
 #win32:QMAKE_LFLAGS += -static-libgcc -static-libstdc++
-
+## Windows Debug help Bug
 
 # use: qmake "USE_QRCODE=1"
 # libqrencode (http://fukuchi.org/works/qrencode/index.en.html) must be installed for support
@@ -140,6 +139,7 @@ INCLUDEPATH += src/leveldb/include src/leveldb/helpers
 LIBS += $$PWD/src/leveldb/libleveldb.a $$PWD/src/leveldb/libmemenv.a
 SOURCES += src/txdb-leveldb.cpp
 
+
 !win32 {
     # we use QMAKE_CXXFLAGS_RELEASE even without RELEASE=1 because we use RELEASE to indicate linking preferences not -O preferences
     genleveldb.commands = cd $$PWD/src/leveldb && CC=$$QMAKE_CC CXX=$$QMAKE_CXX $(MAKE) OPT=\"$$QMAKE_CXXFLAGS $$QMAKE_CXXFLAGS_RELEASE\" libleveldb.a libmemenv.a
@@ -190,7 +190,9 @@ QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Wno-ignored-qu
 # Input
 DEPENDPATH += src src/json src/qt
 HEADERS += src/qt/bitcoingui.h \
+    src/qt/exitwaitdialog.h \
     src/qt/intro.h \
+    src/qt/qutcdatetimeedit.h \
     src/qt/transactiontablemodel.h \
     src/qt/addresstablemodel.h \
     src/qt/optionsdialog.h \
@@ -281,8 +283,17 @@ HEADERS += src/qt/bitcoingui.h \
     src/netbase.h \
     src/clientversion.h \
     src/threadsafety.h \
+    src/checkqueue.h \
+    src/timestamps.h \
     src/qt/qtcamera.h \
-    src/qt/trafficgraphwidget.h
+    src/qt/trafficgraphwidget.h \
+    src/ntp.h \
+    src/qt/chatworker.h \
+    src/qt/chatwidget.h \
+    src/memusage.h \
+    src/qt/burncoinsentry.h \
+    src/qt/burncoinsdialog.h \
+	src/qt/sendtimelockdialog.h
 
 SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/intro.cpp \
@@ -348,6 +359,13 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/rpcconsole.cpp \
     src/qt/qtcamera.cpp \
     src/qt/trafficgraphwidget.cpp \
+    src/ntp.cpp \
+    src/qt/chatwidget.cpp \
+    src/qt/chatworker.cpp \
+    src/qt/burncoinsentry.cpp \
+    src/qt/burncoinsdialog.cpp \
+	src/qt/sendtimelockdialog.cpp \
+	src/qt/exitwaitdialog.cpp \
     src/noui.cpp \
     src/kernel.cpp \
     src/scrypt-arm.S \
@@ -371,10 +389,15 @@ RESOURCES += \
     src/qt/res/qdarkstyle/dark/darkstyle.qrc
 
 FORMS += \
+    src/qt/forms/burncoinsdialog.ui \
+    src/qt/forms/burncoinsentry.ui \
+    src/qt/forms/chatwidget.ui \
+    src/qt/forms/exitwaitdialog.ui \
     src/qt/forms/intro.ui \
     src/qt/forms/coincontroldialog.ui \
     src/qt/forms/sendcoinsdialog.ui \
     src/qt/forms/addressbookpage.ui \
+    src/qt/forms/sendtimelockdialog.ui \
     src/qt/forms/signverifymessagedialog.ui \
     src/qt/forms/aboutdialog.ui \
     src/qt/forms/editaddressdialog.ui \
@@ -438,6 +461,7 @@ DEPENDPATH += $$BOOST_LIB_PATH
 
 LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(BDB_LIB_PATH,,-L,) $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,)  $$join(QRDECODE_LIB_PATH,,-L,)
 LIBS += -lssl -lcrypto -ldb_cxx -lz
+
 # -lgdi32 has to happen after -lcrypto (see  #681)
 windows:LIBS += -lws2_32 -lshlwapi -lmswsock -lole32 -loleaut32 -luuid -lgdi32
 LIBS += -lboost_system -lboost_filesystem -lboost_program_options -lboost_thread -lboost_chrono

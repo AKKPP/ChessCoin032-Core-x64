@@ -118,8 +118,8 @@ Intro::Intro(QWidget *parent) :
     setMinimumSize(480, 306);
     setMaximumSize(480, 306);
 #elif (defined (LINUX) || defined (_linux_))
-    setMinimumSize(480, 368);
-    setMaximumSize(480, 368);
+    setMinimumSize(480, 374);
+    setMaximumSize(480, 374);
 #else
     setMinimumSize(480, 384);
     setMaximumSize(480, 384);

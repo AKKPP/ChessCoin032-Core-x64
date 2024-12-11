@@ -24,10 +24,10 @@ QT_END_NAMESPACE
 
 class SendCoinsRecipient
 {
-public:
-    QString address;
-    QString label;
-    qint64 amount;
+public:   
+    QString  address;
+    QString  label;
+    qint64   amount;
 };
 
 /** Interface to Bitcoin wallet from Qt view code. */
@@ -49,6 +49,7 @@ public:
         DuplicateAddress,
         TransactionCreationFailed, // Error returned when wallet is still locked
         TransactionCommitFailed,
+        BadBurningCoins, //if the user sends coins to a burn address from the send coins dialog
         Aborted
     };
 
@@ -64,6 +65,7 @@ public:
     TransactionTableModel *getTransactionTableModel();
 
     qint64 getBalance() const;
+    qint64 getReserveBalance() const;
     qint64 getStake() const;
     qint64 getUnconfirmedBalance() const;
     qint64 getImmatureBalance() const;

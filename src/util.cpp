@@ -90,6 +90,8 @@ CMedianFilter<int64_t> vTimeOffsets(200,0);
 bool fReopenDebugLog = false;
 bool fSyncForceDueStuck = false;
 
+// Trusted NTP offset or median of NTP samples.
+extern int64_t nNtpOffset;
 
 // print to debug.log
 static FILE* logfileout = NULL;
@@ -208,19 +210,12 @@ uint256 GetRandHash()
     return hash;
 }
 
-
-
-
-
-
-
 inline int OutputDebugStringF(const char* pszFormat, ...)
 {
     int ret = 0;
 
     try
     {
-
         if (fPrintToConsole)
         {
             // print to console
@@ -1031,7 +1026,7 @@ boost::filesystem::path GetDefaultDataDir()
     // Windows < Vista: C:\Documents and Settings\Username\Application Data\ChessCoin
     // Windows >= Vista: C:\Users\Username\AppData\Roaming\ChessCoin
     // Mac: ~/Library/Application Support/ChessCoin
-    // Linux: ~/chesscoin
+    // Linux: ~/.chesscoin
     // Raspberry: ~/.chesscoin
 #if defined (WIN32) || defined (WIN64)
     // Windows
@@ -1052,7 +1047,7 @@ boost::filesystem::path GetDefaultDataDir()
     return pathRet / ".chesscoin";
 #else
     // Unix
-    return pathRet / "chesscoin";
+    return pathRet / ".chesscoin";
 #endif
 #endif
 }
@@ -1320,8 +1315,17 @@ static int64_t nTimeOffset = 0;
 
 int64_t GetTimeOffset()
 {
+    // If NTP and system clock are in agreement within 40 minutes, then use NTP.
+    if (std::abs(nNtpOffset) < 40 * 60)
+        return nNtpOffset;
+
+    // If not, then choose between median peer time and system clock.
+    if (std::abs(nTimeOffset) < 70 * 60)
+        return nTimeOffset;
+
     return nTimeOffset;
 }
+
 
 int64_t GetAdjustedTime()
 {
@@ -1482,36 +1486,6 @@ bool NewThread(void(*pfn)(void*), void* parg)
         return false;
     }
     return true;
-}
-
-int GetComputerRAM()
-{
-    int RAMSize = 0;
-
-#if (defined (_WIN32) || defined (_WIN64))
-    MEMORYSTATUSEX memory_status;
-    ZeroMemory(&memory_status, sizeof(MEMORYSTATUSEX));
-    memory_status.dwLength = sizeof(MEMORYSTATUSEX);
-    if (GlobalMemoryStatusEx(&memory_status)) {
-        RAMSize = (long)(memory_status.ullTotalPhys / (1024 * 1024));
-    }
-#elif (defined (LINUX) || defined (__linux__))
-    struct sysinfo memInfo;
-    sysinfo (&memInfo);
-    long long totalPhysMem = memInfo.totalram;
-    totalPhysMem *= memInfo.mem_unit;
-    RAMSize = (long)(totalPhysMem / (1024 * 1024));
-#elif defined Q_OS_MAC
-    int mib[2];
-    int64_t physical_memory;
-    mib[0] = CTL_HW;
-    mib[1] = HW_MEMSIZE;
-    size_t length = sizeof(int64_t);
-    sysctl(mib, 2, &physical_memory, &length, NULL, 0);
-    RAMSize = (long)(physical_memory / (1024 * 1024));
-#endif
-
-    return RAMSize;
 }
 
 int GetDefaultCacheSize()

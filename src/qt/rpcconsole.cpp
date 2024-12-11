@@ -196,19 +196,18 @@ RPCConsole::RPCConsole(QWidget *parent) :
     ui->setupUi(this);
 
 #if (defined (WIN32) || defined (WIN64))
-    setMinimumHeight(550);
+    resize(720, 610);
+    setMinimumSize(720, 610);
 #elif (defined (LINUX) || defined (__linux__))
-    setMinimumHeight(600);
+    resize(820, 670);
+    setMinimumSize(820, 670);
 #else
-    setMinimumHeight(630);
+    resize(850, 690);
+    setMinimumSize(850, 690);
 #endif
 
-
-
-#ifndef Q_OS_MAC
     ui->openDebugLogfileButton->setIcon(QIcon(":/icons/export"));
     ui->showCLOptionsButton->setIcon(QIcon(":/icons/options"));
-#endif
 
     // Install event filter for up and down arrow
     ui->lineEdit->installEventFilter(this);
@@ -287,6 +286,7 @@ void RPCConsole::setClientModel(ClientModel *model)
 
         updateTrafficStats(model->getTotalBytesRecv(), model->getTotalBytesSent());
         connect(model, SIGNAL(bytesChanged(quint64,quint64)), this, SLOT(updateTrafficStats(quint64, quint64)));
+        connect(model, SIGNAL(mempoolSizeChanged(quint64, quint64)), this, SLOT(setMempoolSize(quint64, quint64)));
 
         // Provide initial values
         ui->clientVersion->setText(model->formatFullVersion());
@@ -570,4 +570,15 @@ void RPCConsole::on_sldGraphRange_valueChanged(int value)
 void RPCConsole::setTabFocus(int tabType)
 {
     ui->tabWidget->setCurrentIndex(tabType);
+}
+
+void RPCConsole::setMempoolSize(quint64 numberOfTxs, quint64 dynUsage)
+{
+    ui->mempoolTx->setText(QString::number(numberOfTxs));
+
+    const auto cur_usage_str = dynUsage < 1000000 ?
+        QObject::tr("%1 KB").arg(dynUsage / 1000.0, 0, 'f', 2) :
+        QObject::tr("%1 MB").arg(dynUsage / 1000000.0, 0, 'f', 2);
+
+    ui->mempoolUsage->setText(cur_usage_str);
 }

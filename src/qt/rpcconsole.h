@@ -53,8 +53,12 @@ public slots:
     void browseHistory(int offset);
     /** Scroll console view to end */
     void scrollToEnd();
+
     void updateElapsedTimer();
+
     void updateTrafficStats(quint64 totalBytesIn, quint64 totalBytesOut);
+
+    void setMempoolSize(quint64 numberOfTxs, quint64 dynUsage);
 
 signals:
     // For RPC command executor

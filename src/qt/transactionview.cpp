@@ -29,6 +29,7 @@
 #include <QLabel>
 #include <QDateTimeEdit>
 
+
 TransactionView::TransactionView(QWidget *parent) :
     QWidget(parent), model(0), transactionProxyModel(0),
     transactionView(0)
@@ -39,18 +40,21 @@ TransactionView::TransactionView(QWidget *parent) :
     QHBoxLayout *hlayout = new QHBoxLayout();
     hlayout->setContentsMargins(0,0,0,0);
 #ifdef Q_OS_MAC
-    hlayout->setSpacing(5);
+    hlayout->setSpacing(1);
     hlayout->addSpacing(26);
+#elif defined Q_OS_LINUX
+    hlayout->setSpacing(1);
+    hlayout->addSpacing(28);
 #else
-    hlayout->setSpacing(0);
-    hlayout->addSpacing(23);
+    hlayout->setSpacing(1);
+    hlayout->addSpacing(41);
 #endif
 
     dateWidget = new QComboBox(this);
 #ifdef Q_OS_MAC
-    dateWidget->setFixedWidth(121);
+    dateWidget->setFixedWidth(131);
 #else
-    dateWidget->setFixedWidth(120);
+    dateWidget->setFixedWidth(130);
 #endif
     dateWidget->addItem(tr("All"), All);
     dateWidget->addItem(tr("Today"), Today);
@@ -63,9 +67,9 @@ TransactionView::TransactionView(QWidget *parent) :
 
     typeWidget = new QComboBox(this);
 #ifdef Q_OS_MAC
-    typeWidget->setFixedWidth(121);
+    typeWidget->setFixedWidth(151);
 #else
-    typeWidget->setFixedWidth(120);
+    typeWidget->setFixedWidth(150);
 #endif
 
     typeWidget->addItem(tr("All"), TransactionFilterProxy::ALL_TYPES);
@@ -91,11 +95,13 @@ TransactionView::TransactionView(QWidget *parent) :
     /* Do not move this to the XML file, Qt before 4.7 will choke on it */
     amountWidget->setPlaceholderText(tr("Min amount"));
 #endif
+
 #ifdef Q_OS_MAC
-    amountWidget->setFixedWidth(97);
+    amountWidget->setFixedWidth(140);
 #else
-    amountWidget->setFixedWidth(100);
+    amountWidget->setFixedWidth(150);
 #endif
+
     amountWidget->setValidator(new QDoubleValidator(0, 1e20, 8, this));
     hlayout->addWidget(amountWidget);
 
@@ -110,15 +116,14 @@ TransactionView::TransactionView(QWidget *parent) :
     vlayout->setSpacing(0);
     int width = view->verticalScrollBar()->sizeHint().width();
     // Cover scroll bar width with spacing
-#ifdef Q_OS_MAC
-    hlayout->addSpacing(width+2);
-#else
     hlayout->addSpacing(width);
-#endif
+
     // Always show scroll bar
     view->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
     view->setTabKeyNavigation(false);
     view->setContextMenuPolicy(Qt::CustomContextMenu);
+    view->setSelectionMode(QAbstractItemView::SingleSelection);
+    view->setSelectionBehavior(QAbstractItemView::SelectRows);
 
     transactionView = view;
 
@@ -179,13 +184,17 @@ void TransactionView::setModel(WalletModel *model)
         transactionView->horizontalHeader()->resizeSection(
                 TransactionTableModel::Status, 23);
         transactionView->horizontalHeader()->resizeSection(
-                TransactionTableModel::Date, 120);
+                TransactionTableModel::Date, 130);
         transactionView->horizontalHeader()->resizeSection(
-                TransactionTableModel::Type, 120);
-        transactionView->horizontalHeader()->setResizeMode(
+                TransactionTableModel::Type, 150);
+        transactionView->horizontalHeader()->setSectionResizeMode(
                 TransactionTableModel::ToAddress, QHeaderView::Stretch);
         transactionView->horizontalHeader()->resizeSection(
-                TransactionTableModel::Amount, 100);
+                TransactionTableModel::Amount, 150);
+#ifdef Q_OS_MAC
+        transactionView->horizontalHeader()->resizeSection(
+                TransactionTableModel::Extra, 0);
+#endif
     }
 }
 

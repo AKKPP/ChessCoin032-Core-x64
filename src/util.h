@@ -243,7 +243,7 @@ std::string FormatFullVersion();
 std::string FormatSubVersion(const std::string& name, int nClientVersion, const std::vector<std::string>& comments);
 void AddTimeData(const CNetAddr& ip, int64_t nTime);
 void runCommand(std::string strCommand);
-
+int64_t GetNodesOffset();
 
 
 
@@ -363,17 +363,20 @@ inline std::string DateTimeStrFormat(const char* pszFormat, int64_t nTime)
 {
     time_t n = nTime;
     struct tm* ptmTime = gmtime(&n);
-    char pszTime[200];
+    char pszTime[128];
     strftime(pszTime, sizeof(pszTime), pszFormat, ptmTime);
     return pszTime;
 }
 
-static const std::string strTimestampFormat = "%Y-%m-%d %H:%M:%S UTC";
 inline std::string DateTimeStrFormat(int64_t nTime)
 {
-    return DateTimeStrFormat(strTimestampFormat.c_str(), nTime);
+    return DateTimeStrFormat("%Y-%m-%d %H:%M:%S UTC", nTime);
 }
 
+inline std::string TimeStrFormat(int64_t nTime)
+{
+    return DateTimeStrFormat("[%H:%M:%S] ", nTime);
+}
 
 template<typename T>
 void skipspaces(T& it)
@@ -632,8 +635,6 @@ public:
 };
 
 bool NewThread(void(*pfn)(void*), void* parg);
-
-int GetComputerRAM();
 
 int GetDefaultCacheSize();
 

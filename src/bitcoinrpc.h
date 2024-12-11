@@ -49,6 +49,8 @@ enum RPCErrorCode
     RPC_INVALID_PARAMETER           = -8,  // Invalid, missing or duplicate parameter
     RPC_DATABASE_ERROR              = -20, // Database error
     RPC_DESERIALIZATION_ERROR       = -22, // Error parsing or validating structure in raw format
+    RPC_UNABLE_TO_SIGN_BLOCK        = -100, // Block is unable to be signed
+    RPC_SEND_AMOUNT_TOO_SMALL       = -101, // Send amount is too small
 
     // P2P client errors
     RPC_CLIENT_NOT_CONNECTED        = -9,  // Bitcoin is not connected
@@ -130,6 +132,7 @@ extern int64_t nWalletUnlockTime;
 extern int64_t AmountFromValue(const json_spirit::Value& value);
 extern json_spirit::Value ValueFromAmount(int64_t amount);
 extern double GetDifficulty(const CBlockIndex* blockindex = NULL);
+extern json_spirit::Value GetNetworkHashPS(int lookup, int height);
 
 extern double GetPoWMHashPS();
 extern double GetPoSKernelPS();
@@ -163,6 +166,7 @@ extern json_spirit::Value getwork(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getworkex(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getblocktemplate(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value submitblock(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value getnetworkhashps(const json_spirit::Array& params, bool fHelp);
 
 extern json_spirit::Value getnewaddress(const json_spirit::Array& params, bool fHelp); // in rpcwallet.cpp
 extern json_spirit::Value getaccountaddress(const json_spirit::Array& params, bool fHelp);
@@ -223,5 +227,10 @@ extern json_spirit::Value getcheckpoint(const json_spirit::Array& params, bool f
 
 extern json_spirit::Value getblockchaininfo(const json_spirit::Array& params, bool fHelp); // in rpcblockchain.cpp
 extern json_spirit::Value getnetworkinfo(const json_spirit::Array& params, bool fHelp); // in rpcnet.cpp
+extern json_spirit::Value getnetstat(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value ntptime(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value getmempoolinfo(const json_spirit::Array& params, bool fHelp);
+
+extern json_spirit::Value getmoneysupply(const json_spirit::Array& params, bool fHelp);
 
 #endif

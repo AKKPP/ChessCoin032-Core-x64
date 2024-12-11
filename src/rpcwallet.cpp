@@ -98,6 +98,7 @@ Value getinfo(const Array& params, bool fHelp)
     diff.push_back(Pair("proof-of-work",  GetDifficulty()));
     diff.push_back(Pair("proof-of-stake", GetDifficulty(GetLastBlockIndex(pindexBest, true))));
     obj.push_back(Pair("difficulty",    diff));
+    obj.push_back(Pair("networkhashps", GetNetworkHashPS(120, -1)));
 
     obj.push_back(Pair("testnet",       fTestNet));
     obj.push_back(Pair("keypoololdest", (int64_t)pwalletMain->GetOldestKeyPoolTime()));
@@ -216,14 +217,16 @@ Value getaccountaddress(const Array& params, bool fHelp)
     // Parse the account first so we don't generate a key if there's an error
     string strAccount = AccountFromValue(params[0]);
 
-    Value ret;
+    CBitcoinAddress address(strAccount);
+    if (address.IsValid())
+    {
+        if (IsBurnAddress(address))
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid account name");
+    }
 
-    ret = GetAccountAddress(strAccount).ToString();
-
+    Value ret = GetAccountAddress(strAccount).ToString();
     return ret;
 }
-
-
 
 Value setaccount(const Array& params, bool fHelp)
 {
@@ -267,6 +270,12 @@ Value getaccount(const Array& params, bool fHelp)
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid ChessCoin 0.32% address");
 
     string strAccount;
+    if (IsBurnAddress(address))
+    {
+        strAccount = "ChessCoin 0.32% Burn Address";
+        return strAccount;
+    }
+
     map<CTxDestination, string>::iterator mi = pwalletMain->mapAddressBook.find(address.Get());
     if (mi != pwalletMain->mapAddressBook.end() && !(*mi).second.empty())
         strAccount = (*mi).second;
@@ -282,6 +291,13 @@ Value getaddressesbyaccount(const Array& params, bool fHelp)
             "Returns the list of addresses for the given account.");
 
     string strAccount = AccountFromValue(params[0]);
+
+    CBitcoinAddress address(strAccount);
+    if (address.IsValid())
+    {
+        if (IsBurnAddress(address))
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid account name");
+    }
 
     // Find all addresses that have the given account
     Array ret;
@@ -656,7 +672,6 @@ Value movecmd(const Array& params, bool fHelp)
 
     return true;
 }
-
 
 Value sendfrom(const Array& params, bool fHelp)
 {
@@ -1798,3 +1813,4 @@ Value makekeypair(const Array& params, bool fHelp)
     result.push_back(Pair("PublicKey", HexStr(key.GetPubKey().Raw())));
     return result;
 }
+

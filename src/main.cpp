@@ -379,9 +379,8 @@ bool IsStandardTx(const CTransaction& tx)
 
 bool IsFinalTx(const CTransaction &tx, int nBlockHeight, int64_t nBlockTime)
 {
-#ifdef LOCKMODE	
     AssertLockHeld(cs_main);
-#endif
+
     // Time based nLockTime implemented in 0.1.6
     if (tx.nLockTime == 0)
         return true;
@@ -395,6 +394,16 @@ bool IsFinalTx(const CTransaction &tx, int nBlockHeight, int64_t nBlockTime)
         if (!txin.IsFinal())
             return false;
     return true;
+}
+
+uint64_t CalculateTxSize(const CTransaction& tx)
+{
+    // Serialize the transaction to a stream
+    CDataStream ssTx(SER_NETWORK, PROTOCOL_VERSION);
+    ssTx << tx;
+
+    // Return the size of the serialized transaction
+    return ssTx.size();
 }
 
 //
@@ -481,9 +490,7 @@ CTransaction::GetLegacySigOpCount() const
 
 int CMerkleTx::SetMerkleBranch(const CBlock* pblock)
 {
-#ifdef LOCKMODE		
     AssertLockHeld(cs_main);
-#endif
 
     CBlock blockTmp;
     if (pblock == NULL)
@@ -613,12 +620,9 @@ int64_t CTransaction::GetMinFee(unsigned int nBlockSize, enum GetMinFee_mode mod
 }
 
 
-bool AcceptToMemoryPool(CTxMemPool& pool, CTransaction &tx,
-                        bool* pfMissingInputs)
+bool AcceptToMemoryPool(CTxMemPool& pool, CTransaction &tx, bool* pfMissingInputs)
 {
-#ifdef LOCKMODE	
     AssertLockHeld(cs_main);
-#endif
     
     if (pfMissingInputs)
         *pfMissingInputs = false;
@@ -634,9 +638,12 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CTransaction &tx,
     if (tx.IsCoinStake())
         return tx.DoS(100, error("AcceptToMemoryPool : coinstake as individual tx"));
 
+    if ((int64_t)tx.nLockTime > std::numeric_limits<unsigned int>::max())
+        return tx.DoS(100, error("AcceptToMemoryPool : not accepting nLockTime beyond 2106 yet"));
+
     // Rather not work on nonstandard transactions (unless -testnet)
     if (!fTestNet && !IsStandardTx(tx))
-        return error("AcceptToMemoryPool : nonstandard transaction type");
+        return tx.DoS(100, ("AcceptToMemoryPool : nonstandard transaction type"));
 
     // is it already in the memory pool?
     uint256 hash = tx.GetHash();
@@ -646,32 +653,32 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CTransaction &tx,
     // Check for conflicts with in-memory transactions
     CTransaction* ptxOld = NULL;
     {
-    LOCK(pool.cs); // protect pool.mapNextTx
-    for (unsigned int i = 0; i < tx.vin.size(); i++)
-    {
-        COutPoint outpoint = tx.vin[i].prevout;
-        if (pool.mapNextTx.count(outpoint))
+        LOCK(pool.cs); // protect pool.mapNextTx
+        for (unsigned int i = 0; i < tx.vin.size(); i++)
         {
-            // Disable replacement feature for now
-            return false;
-
-            // Allow replacing with a newer version of the same transaction
-            if (i != 0)
-                return false;
-            ptxOld = pool.mapNextTx[outpoint].ptx;
-            if (IsFinalTx(*ptxOld))
-                return false;
-            if (!tx.IsNewerThan(*ptxOld))
-                return false;
-            for (unsigned int i = 0; i < tx.vin.size(); i++)
+            COutPoint outpoint = tx.vin[i].prevout;
+            if (pool.mapNextTx.count(outpoint))
             {
-                COutPoint outpoint = tx.vin[i].prevout;
-                if (!pool.mapNextTx.count(outpoint) || pool.mapNextTx[outpoint].ptx != ptxOld)
+                // Disable replacement feature for now
+                return false;
+
+                // Allow replacing with a newer version of the same transaction
+                if (i != 0)
                     return false;
+                ptxOld = pool.mapNextTx[outpoint].ptx;
+                if (IsFinalTx(*ptxOld))
+                    return false;
+                if (!tx.IsNewerThan(*ptxOld))
+                    return false;
+                for (unsigned int i = 0; i < tx.vin.size(); i++)
+                {
+                    COutPoint outpoint = tx.vin[i].prevout;
+                    if (!pool.mapNextTx.count(outpoint) || pool.mapNextTx[outpoint].ptx != ptxOld)
+                        return false;
+                }
+                break;
             }
-            break;
         }
-    }
     }
 
     {
@@ -776,6 +783,7 @@ bool CTxMemPool::addUnchecked(const uint256& hash, CTransaction &tx)
             mapNextTx[tx.vin[i].prevout] = CInPoint(&mapTx[hash], i);
         nTransactionsUpdated++;
     }
+
     return true;
 }
 
@@ -843,11 +851,9 @@ void CTxMemPool::queryHashes(std::vector<uint256>& vtxid)
 int CMerkleTx::GetDepthInMainChainINTERNAL(CBlockIndex* &pindexRet) const
 {
     if (hashBlock == 0 || nIndex == -1)
-        return 0;
-        
-#ifdef LOCKMODE	        
+        return 0;        
+
     AssertLockHeld(cs_main);
-#endif
 
     // Find the block it claims to be in
     map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(hashBlock);
@@ -871,9 +877,7 @@ int CMerkleTx::GetDepthInMainChainINTERNAL(CBlockIndex* &pindexRet) const
 
 int CMerkleTx::GetDepthInMainChain(CBlockIndex* &pindexRet) const
 {
-#ifdef LOCKMODE		
     AssertLockHeld(cs_main);
-#endif
     
     int nResult = GetDepthInMainChainINTERNAL(pindexRet);
     if (nResult == 0 && !mempool.exists(GetHash()))
@@ -1025,14 +1029,13 @@ uint256 WantedByOrphan(const CBlock* pblockOrphan)
 
 // miner's coin base reward
 int64_t GetProofOfWorkReward(int64_t nFees)
-{
-    
-            int64_t nSubsidy = 64 * COIN;
+{    
+    int64_t nSubsidy = 64 * COIN;
 
-            if(nBestHeight == 0)
-            {
-            nSubsidy = 47786667 * COIN;
-            }
+    if(nBestHeight == 0)
+    {
+        nSubsidy = 47786667 * COIN;
+    }
 
     if (fDebug && GetBoolArg("-printcreation"))
         printf("GetProofOfWorkReward() : create=%s nSubsidy=%" PRId64 "\n", FormatMoney(nSubsidy).c_str(), nSubsidy);
@@ -1048,13 +1051,13 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, int64_t nFees)
 
     if (nBestHeight <= 1999793)
     {
-     int64_t nSubsidy = nCoinAge * COIN_YEAR_REWARD * 33 / (365 * 33 + 8);
-     return nSubsidy + nFees;
+        nSubsidy = nCoinAge * COIN_YEAR_REWARD * 33 / (365 * 33 + 8);
+        return nSubsidy + nFees;
     }
     else if (nBestHeight > 1999793)
     {
-     int64_t nSubsidy = nCoinAge * COIN_YEAR_REWARDV2 * 33 / (365 * 33 + 8);
-     return nSubsidy + nFees;
+        nSubsidy = nCoinAge * COIN_YEAR_REWARDV2 * 33 / (365 * 33 + 8);
+        return nSubsidy + nFees;
     }
 
     if (fDebug && GetBoolArg("-printcreation"))
@@ -1209,9 +1212,7 @@ int GetNumBlocksOfPeers()
 
 bool IsInitialBlockDownload()
 {
-#ifdef LOCKMODE		
     LOCK(cs_main);
-#endif
     
     if (pindexBest == NULL || nBestHeight < Checkpoints::GetTotalBlocksEstimate())
         return true;
@@ -1608,8 +1609,10 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
             int64_t nTxValueOut = tx.GetValueOut();
             nValueIn += nTxValueIn;
             nValueOut += nTxValueOut;
+
             if (!tx.IsCoinStake())
                 nFees += nTxValueIn - nTxValueOut;
+
             if (tx.IsCoinStake())
                 nStakeReward = nTxValueOut - nTxValueIn;
 
@@ -1999,6 +2002,7 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos, const u
     CBlockIndex* pindexNew = new CBlockIndex(nFile, nBlockPos, *this);
     if (!pindexNew)
         return error("AddToBlockIndex() : new CBlockIndex failed");
+
     pindexNew->phashBlock = &hash;
     map<uint256, CBlockIndex*>::iterator miPrev = mapBlockIndex.find(hashPrevBlock);
     if (miPrev != mapBlockIndex.end())
@@ -2040,10 +2044,8 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos, const u
     txdb.WriteBlockIndex(CDiskBlockIndex(pindexNew));
     if (!txdb.TxnCommit())
         return false;
-        
-#ifdef LOCKMODE
+
     LOCK(cs_main);
-#endif
 
     // New best
     if (pindexNew->nChainTrust > nBestChainTrust)
@@ -2160,9 +2162,7 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
 
 bool CBlock::AcceptBlock()
 {
-#ifdef LOCKMODE	
     AssertLockHeld(cs_main);
-#endif    
 
     if (nVersion > CURRENT_VERSION)
         return DoS(100, error("AcceptBlock() : reject unknown block version %d", nVersion));
@@ -2176,6 +2176,7 @@ bool CBlock::AcceptBlock()
     map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(hashPrevBlock);
     if (mi == mapBlockIndex.end())
         return DoS(10, error("AcceptBlock() : prev block not found"));
+
     CBlockIndex* pindexPrev = (*mi).second;
     int nHeight = pindexPrev->nHeight+1;
 
@@ -2281,9 +2282,7 @@ bool CBlockIndex::IsSuperMajority(int minVersion, const CBlockIndex* pstart, uns
 
 bool ProcessBlock(CNode* pfrom, CBlock* pblock)
 {
-#ifdef LOCKMODE		
     AssertLockHeld(cs_main);
-#endif    
 
     // Check for duplicate
     uint256 hash = pblock->GetHash();
@@ -2332,6 +2331,7 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
     if (!mapBlockIndex.count(pblock->hashPrevBlock))
     {
         printf("ProcessBlock: ORPHAN BLOCK, prev=%s\n", pblock->hashPrevBlock.ToString().substr(0,20).c_str());
+
         // ppcoin: check proof-of-stake
         if (pblock->IsProofOfStake())
         {
@@ -2694,9 +2694,7 @@ bool LoadBlockIndex(bool fAllowNew)
 
 void PrintBlockTree()
 {
-#ifdef LOCKMODE		
     AssertLockHeld(cs_main);
-#endif
     
     // pre-compute tree structure
     map<CBlockIndex*, vector<CBlockIndex*> > mapNext;
@@ -3157,6 +3155,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
     {
         vector<CInv> vInv;
         vRecv >> vInv;
+
         if (vInv.size() > MAX_INV_SZ)
         {
             pfrom->Misbehaving(20);
@@ -3773,7 +3772,6 @@ bool SendMessages(CNode* pto)
             if (!vAddr.empty())
                 pto->PushMessage("addr", vAddr);
         }
-
 
         //
         // Message: inventory

@@ -3,7 +3,6 @@
 
 #include <QMainWindow>
 #include <QSystemTrayIcon>
-
 #include <stdint.h>
 #include "guiutil.h"
 
@@ -19,6 +18,8 @@ class Notificator;
 class RPCConsole;
 class AboutDialog;
 class OptionsDialog;
+class QChatWidget;
+class BurnCoinsDialog;
 
 QT_BEGIN_NAMESPACE
 class QLabel;
@@ -29,6 +30,7 @@ class QModelIndex;
 class QProgressBar;
 class QStackedWidget;
 class QUrl;
+class QToolBar;
 QT_END_NAMESPACE
 
 /**
@@ -57,6 +59,7 @@ protected:
     void closeEvent(QCloseEvent *event);
     void dragEnterEvent(QDragEnterEvent *event);
     void dropEvent(QDropEvent *event);
+    void resizeEvent(QResizeEvent *event);
 
 private:
     ClientModel *clientModel;
@@ -70,8 +73,11 @@ private:
     AddressBookPage *receiveCoinsPage;
     SendCoinsDialog *sendCoinsPage;
     SignVerifyMessageDialog *signVerifyMessageDialog;
+    QChatWidget *chatPage;
+    BurnCoinsDialog *burnCoinsPage;
 
     QLabel *labelEncryptionIcon;
+    GUIUtil::QHoverLabel *labelNTPTimeIcon;
     GUIUtil::QClickableLabel *labelStakingIcon;
     GUIUtil::QClickableLabel *labelConnectionsIcon;
     GUIUtil::QClickableLabel *labelBlocksIcon;
@@ -79,6 +85,10 @@ private:
     QProgressBar *progressBar;
 
     QMenuBar *appMenuBar;
+
+    QToolBar *mainToolBar;
+    QToolBar *chessToolBar;
+
     QAction *overviewAction;
     QAction *historyAction;
     QAction *quitAction;
@@ -98,12 +108,15 @@ private:
     QAction *lockWalletAction;
     QAction *aboutQtAction;
     QAction *openRPCConsoleAction;
+    QAction *chessPlayAction;
+    QAction *chessResetAction;
+    QAction *chatAction;
+    QAction *burnCoinsAction;
 
     QSystemTrayIcon *trayIcon;
     Notificator *notificator;
     TransactionView *transactionView;
     RPCConsole *rpcConsole;
-    AboutDialog *aboutDialog;
     OptionsDialog *optionsDialog;
 
     QMovie *syncIconMovie;
@@ -193,6 +206,14 @@ private slots:
     void updateStakingIcon();
 
     void showRPCConsoleDebug();
+    void showRPCNetTraffic();
+    void showNTPTimeMessage();
+
+    void onPlayChess();
+    void onResetChessEngineJson();
+
+    void gotoChatRoomPage();    
+    void gotoBurnCoinsPage();
 };
 
 #endif

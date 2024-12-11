@@ -28,12 +28,6 @@ AddressBookPage::AddressBookPage(Mode mode, Tabs tab, QWidget *parent) :
 {
     ui->setupUi(this);
 
-#ifdef Q_OS_MAC // Icons on push buttons are very uncommon on Mac
-    ui->newAddressButton->setIcon(QIcon());
-    ui->copyToClipboard->setIcon(QIcon());
-    ui->deleteButton->setIcon(QIcon());
-#endif
-
 #ifndef USE_QRCODE
     ui->showQRCode->setVisible(false);
 #endif
@@ -55,12 +49,22 @@ AddressBookPage::AddressBookPage(Mode mode, Tabs tab, QWidget *parent) :
         ui->labelExplanation->setVisible(false);
         ui->deleteButton->setVisible(true);
         ui->signMessage->setVisible(false);
+        ui->comboAddrType->setVisible(true);
         break;
     case ReceivingTab:
         ui->deleteButton->setVisible(false);
         ui->signMessage->setVisible(true);
+        ui->comboAddrType->setVisible(false);
         break;
     }
+
+#ifdef Q_OS_MAC
+    ui->comboAddrType->setMinimumWidth(190);
+#elif defined Q_OS_LINUX
+    ui->comboAddrType->setMinimumWidth(190);
+#else
+    ui->comboAddrType->setMinimumWidth(140);
+#endif
 
     // Context menu actions
     QAction *copyLabelAction = new QAction(tr("Copy &Label"), this);
@@ -121,6 +125,7 @@ void AddressBookPage::setModel(AddressTableModel *model)
     proxyModel->setDynamicSortFilter(true);
     proxyModel->setSortCaseSensitivity(Qt::CaseInsensitive);
     proxyModel->setFilterCaseSensitivity(Qt::CaseInsensitive);
+
     switch(tab)
     {
     case ReceivingTab:
@@ -131,21 +136,20 @@ void AddressBookPage::setModel(AddressTableModel *model)
     case SendingTab:
         // Send filter
         proxyModel->setFilterRole(AddressTableModel::TypeRole);
-        proxyModel->setFilterFixedString(AddressTableModel::Send);
+        //proxyModel->setFilterFixedString(AddressTableModel::Send);
         break;
     }
     ui->tableView->setModel(proxyModel);
     ui->tableView->sortByColumn(0, Qt::AscendingOrder);
 
     // Set column widths
-    ui->tableView->horizontalHeader()->resizeSection(
-            AddressTableModel::Address, 320);
+    ui->tableView->horizontalHeader()->resizeSection(AddressTableModel::Address, 320);
 #if QT_VERSION < 0x050000
-    ui->tableView->horizontalHeader()->setResizeMode(
-            AddressTableModel::Label, QHeaderView::Stretch);
+    ui->tableView->horizontalHeader()->setResizeMode(AddressTableModel::Label,
+                                                     QHeaderView::Stretch);
 #else
-    ui->tableView->horizontalHeader()->setSectionResizeMode(
-    AddressTableModel::Label, QHeaderView::Stretch);
+    ui->tableView->horizontalHeader()->setSectionResizeMode(AddressTableModel::Label,
+                                                            QHeaderView::Stretch);
 #endif
     connect(ui->tableView->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
             this, SLOT(selectionChanged()));
@@ -389,3 +393,32 @@ void AddressBookPage::selectNewAddress(const QModelIndex &parent, int begin, int
         newAddressToSelect.clear();
     }
 }
+
+void AddressBookPage::on_comboAddrType_currentIndexChanged(int index)
+{
+    if (index == 2)
+    {
+        proxyModel->setFilterRole(AddressTableModel::TypeRole);
+        proxyModel->setFilterFixedString(AddressTableModel::Receive);
+    }
+    else if (index == 1)
+    {
+        proxyModel->setFilterRole(AddressTableModel::TypeRole);
+        proxyModel->setFilterFixedString(AddressTableModel::Send);
+    }
+    else
+    {
+        proxyModel->setFilterRole(AddressTableModel::TypeRole);
+        // Create a regex to match both "Send" and "Receive"
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 15, 0))
+        QRegularExpression regex(QString("%1|%2").arg(AddressTableModel::Send, AddressTableModel::Receive));
+        proxyModel->setFilterRegularExpression(regex);
+#else
+        QRegExp regex(QString("%1|%2").arg(AddressTableModel::Send, AddressTableModel::Receive));
+        proxyModel->setFilterRegExp(regex);
+#endif
+    }
+
+    ui->tableView->setModel(proxyModel);
+}
+

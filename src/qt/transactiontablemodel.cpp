@@ -18,13 +18,17 @@
 #include <QDateTime>
 #include <QtAlgorithms>
 
+
 // Amount column is right-aligned it contains numbers
 static int column_alignments[] = {
         Qt::AlignLeft|Qt::AlignVCenter,
         Qt::AlignLeft|Qt::AlignVCenter,
         Qt::AlignLeft|Qt::AlignVCenter,
         Qt::AlignLeft|Qt::AlignVCenter,
-        Qt::AlignRight|Qt::AlignVCenter
+        Qt::AlignRight|Qt::AlignVCenter,
+#ifdef Q_OS_MAC
+        Qt::AlignLeft|Qt::AlignVCenter,
+#endif
     };
 
 // Comparison operator for sort/binary search of model tx list
@@ -229,7 +233,11 @@ TransactionTableModel::TransactionTableModel(CWallet* wallet, WalletModel *paren
         walletModel(parent),
         priv(new TransactionTablePriv(wallet, this))
 {
-    columns << QString() << tr("Date") << tr("Type") << tr("Address") << tr("Amount");
+#ifdef Q_OS_MAC
+    columns << QString("") << tr("Date") << tr("Type") << tr("Address") << tr("Amount    ") << QString("");
+#else
+    columns << QString("") << tr("Date") << tr("Type") << tr("Address") << tr("Amount    ");
+#endif
 
     priv->refreshWallet();
 
@@ -438,9 +446,9 @@ QVariant TransactionTableModel::txStatusDecoration(const TransactionRecord *wtx)
     {
     case TransactionStatus::OpenUntilBlock:
     case TransactionStatus::OpenUntilDate:
-        return QColor(64,64,255);
+        return QIcon(":/icons/transaction_lock");
     case TransactionStatus::Offline:
-        return QColor(192,192,192);
+        return QIcon(":/icons/transaction_offline");
     case TransactionStatus::Unconfirmed:
         return QIcon(":/icons/transaction_0");
     case TransactionStatus::Confirming:

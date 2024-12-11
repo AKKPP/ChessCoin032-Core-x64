@@ -1109,8 +1109,11 @@ void ThreadSocketHandler2(void* parg)
 // Each pair gives a source name and a seed name.
 // The first name is used as information source for addrman.
 // The second name should resolve to a list of seed addresses.
+#ifdef DNSSeed
 static const char *strDNSSeed[][2] = {
+    nullptr
 };
+#endif
 
 void ThreadDNSAddressSeed(void* parg)
 {
@@ -1142,6 +1145,7 @@ void ThreadDNSAddressSeed2(void* parg)
     {
         printf("Loading addresses from DNS seeds (could take a while)\n");
 
+#ifdef DNSSeed
         for (unsigned int seed_idx = 0; seed_idx < ARRAYLEN(strDNSSeed); seed_idx++) {
             if (HaveNameProxy()) {
                 AddOneShot(strDNSSeed[seed_idx][1]);
@@ -1162,7 +1166,9 @@ void ThreadDNSAddressSeed2(void* parg)
                 addrman.Add(vAdd, CNetAddr(strDNSSeed[seed_idx][0], true));
             }
         }
+#endif
     }
+
 
     printf("%d addresses found from DNS seeds\n", found);
 }
@@ -1177,10 +1183,12 @@ void ThreadDNSAddressSeed2(void* parg)
 
 
 
-
+#ifdef USE_PNSEED
 unsigned int pnSeed[] =
 {
+
 };
+#endif
 
 void DumpAddresses()
 {
@@ -1328,6 +1336,7 @@ void ThreadOpenConnections2(void* parg)
         if (addrman.size()==0 && (GetTime() - nStart > 60) && !fTestNet)
         {
             std::vector<CAddress> vAdd;
+#ifdef USE_PNSEED
             for (unsigned int i = 0; i < ARRAYLEN(pnSeed); i++)
             {
                 // It'll only connect to one or two seed nodes because once it connects,
@@ -1341,6 +1350,7 @@ void ThreadOpenConnections2(void* parg)
                 addr.nTime = GetTime()-GetRand(nOneWeek)-nOneWeek;
                 vAdd.push_back(addr);
             }
+#endif
             addrman.Add(vAdd, CNetAddr("127.0.0.1"));
         }
 

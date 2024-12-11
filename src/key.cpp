@@ -382,6 +382,7 @@ bool CKey::SignCompact(uint256 hash, std::vector<unsigned char>& vchSig)
     vchSig.resize(65,0);
     int nBitsR = BN_num_bits(sig->r);
     int nBitsS = BN_num_bits(sig->s);
+
     if (nBitsR <= 256 && nBitsS <= 256)
     {
         int nRecId = -1;
@@ -412,38 +413,6 @@ bool CKey::SignCompact(uint256 hash, std::vector<unsigned char>& vchSig)
     }
     ECDSA_SIG_free(sig);
     return fOk;
-}
-
-// reconstruct public key from a compact signature
-// This is only slightly more CPU intensive than just verifying it.
-// If this function succeeds, the recovered public key is guaranteed to be valid
-// (the signature is a valid signature of the given data for that key)
-bool CKey::SetCompactSignature(uint256 hash, const std::vector<unsigned char>& vchSig)
-{
-    if (vchSig.size() != 65)
-        return false;
-    int nV = vchSig[0];
-    if (nV<27 || nV>=35)
-        return false;
-    ECDSA_SIG *sig = ECDSA_SIG_new();
-    BN_bin2bn(&vchSig[1],32,sig->r);
-    BN_bin2bn(&vchSig[33],32,sig->s);
-
-    EC_KEY_free(pkey);
-    pkey = EC_KEY_new_by_curve_name(NID_secp256k1);
-    if (nV >= 31)
-    {
-        SetCompressedPubKey();
-        nV -= 4;
-    }
-    if (ECDSA_SIG_recover_key_GFp(pkey, sig, (unsigned char*)&hash, sizeof(hash), nV - 27, 0) == 1)
-    {
-        fSet = true;
-        ECDSA_SIG_free(sig);
-        return true;
-    }
-    ECDSA_SIG_free(sig);
-    return false;
 }
 
 bool CKey::Verify(uint256 hash, const std::vector<unsigned char>& vchSig)
@@ -478,4 +447,49 @@ bool ECC_InitSanityCheck() {
 
     // TODO Is there more EC functionality that could be missing?
     return true;
+}
+
+// reconstruct public key from a compact signature
+// This is only slightly more CPU intensive than just verifying it.
+// If this function succeeds, the recovered public key is guaranteed to be valid
+// (the signature is a valid signature of the given data for that key)
+bool CKey::SetCompactSignature(uint256 hash, const std::vector<unsigned char>& vchSig)
+{
+    if (vchSig.size() != 65)
+        return false;
+    int nV = vchSig[0];
+    if (nV<27 || nV>=35)
+        return false;
+
+    ECDSA_SIG *sig = ECDSA_SIG_new();
+    if (sig == NULL)
+        return false;
+
+    BIGNUM *r = BN_bin2bn(&vchSig[1], 32, NULL);
+    BIGNUM *s = BN_bin2bn(&vchSig[33], 32, NULL);
+    if (r == NULL || s == NULL)
+        return false;
+
+    if (ECDSA_SIG_set0(sig, r, s) == 0)
+    {
+        ECDSA_SIG_free(sig);
+        return false;
+    }
+
+    EC_KEY_free(pkey);
+    pkey = EC_KEY_new_by_curve_name(NID_secp256k1);
+    if (nV >= 31)
+    {
+        SetCompressedPubKey();
+        nV -= 4;
+    }
+
+    if (ECDSA_SIG_recover_key_GFp(pkey, sig, (unsigned char*)&hash, sizeof(hash), nV - 27, 0) == 1)
+    {
+        fSet = true;
+        ECDSA_SIG_free(sig);
+        return true;
+    }
+    ECDSA_SIG_free(sig);
+    return false;
 }

@@ -24,8 +24,9 @@
 #include <QLibraryInfo>
 #include <QSettings>
 #include <QFile>
+#include <QFileInfo>
+#include <QDir>
 #include <QTextStream>
-
 
 #if (defined (LINUX) || defined (_linux_))
 #include <boost/filesystem.hpp>
@@ -47,8 +48,8 @@ Q_IMPORT_PLUGIN(qtaccessiblewidgets)
 #endif
 
 // Need a global reference for the notifications to find the GUI
-static BitcoinGUI *guiref;
-static QSplashScreen *splashref;
+static BitcoinGUI *guiref = nullptr;
+static QSplashScreen *splashref = nullptr;
 
 /** Set up translations */
 static void initTranslations(QTranslator &qtTranslatorBase, QTranslator &qtTranslator, QTranslator &translatorBase, QTranslator &translator)
@@ -158,64 +159,11 @@ static void handleRunawayException(std::exception *e)
     exit(1);
 }
 
-#if (defined (LINUX) || defined (_linux_))
-static void createDesktopFile()
-{
-    string deskdir = "";
-
-    char* pszConfigHome = getenv("XDG_CONFIG_HOME");
-    if (pszConfigHome)
-         deskdir = pszConfigHome;
-    else
-    {
-        char* pszHome = getenv("HOME");
-        if (pszHome)
-            deskdir = pszHome;
-    }
-
-    if (deskdir == "")
-        return;
-
-    char pszExePath[MAX_PATH+1];
-    memset(pszExePath, 0, sizeof(pszExePath));
-    if (readlink("/proc/self/exe", pszExePath, sizeof(pszExePath)-1) == -1)
-        return;
-
-    //string deskfile = "/usr/share/applications/chesscoin-qt.desktop";
-    string deskfile = deskdir + "/Desktop/chesscoin-qt.desktop";
-
-    boost::filesystem::ofstream optionFile(deskfile, std::ios_base::out|std::ios_base::trunc);
-    if (!optionFile.good())
-    {
-        fprintf(stderr, "desktop file creation failure...\n");
-        return;
-    }
-
-    // Write a bitcoin.desktop file to the autostart directory:
-    optionFile << "[Desktop Entry]\n";
-    optionFile << "Type=Application\n";
-    optionFile << "Name=chesscoin-qt\n";
-    optionFile << "Exec=" << pszExePath << "\n";
-    optionFile << "Icon=" << pszExePath << ".png\n";
-    optionFile << "Terminal=false\n";
-    optionFile << "Hidden=false\n";
-    optionFile << "GenericName=chesscoin-qt\n";
-    optionFile << "Comment=GUI application for linux\n";
-    optionFile << "Categories=Application\n";
-    optionFile.close();
-
-    chmod(deskfile.c_str(), ACCESSPERMS); // enables owner to rwx file
-
-    string cmd = "gio set ";
-    cmd += deskfile;
-    cmd += " metadata::trusted yes";
-    system(cmd.c_str());
-}
-#endif
-
 #ifndef BITCOIN_QT_TEST
 int main(int argc, char *argv[])
 {
+    qRegisterMetaType<int64_t>("int64_t");
+
     // Do this early as we don't want to bother initializing if we are just calling IPC
     ipcScanRelay(argc, argv);
 
@@ -238,19 +186,14 @@ int main(int argc, char *argv[])
         app.setApplicationName("ChessCoin-Qt");
 
     QFile f(":qdarkstyle/dark/darkstyle.qss");
-
     if (f.exists()) {
         f.open(QFile::ReadOnly | QFile::Text);
         QTextStream ts(&f);
-        qApp->setStyleSheet(ts.readAll());
+        app.setStyleSheet(ts.readAll());
     }
     else {
         app.setStyle("fusion");
     }
-
-//#if (defined (LINUX) || defined (_linux_))
-//    createDesktopFile();
-//#endif
 
     // Now that QSettings are accessible, initialize translations
     QTranslator qtTranslatorBase, qtTranslator, translatorBase, translator;
@@ -318,7 +261,6 @@ int main(int argc, char *argv[])
             {
                 // Put this in a block, so that the Model objects are cleaned up before
                 // calling Shutdown().
-
                 if (splashref)
                     splash.finish(&window);
 
@@ -338,18 +280,19 @@ int main(int argc, char *argv[])
                     window.show();
                 }
 
+
                 // Place this here as guiref has to be defined if we don't want to lose URIs
                 ipcInit(argc, argv);
 
                 app.exec();
 
                 window.hide();
-                window.setClientModel(0);
-                window.setWalletModel(0);
-                guiref = 0;
+                window.setClientModel(nullptr);
+                window.setWalletModel(nullptr);
+                guiref = nullptr;
             }
             // Shutdown the core and its threads, but don't exit Bitcoin-Qt here
-            Shutdown(NULL);
+            Shutdown(nullptr);
         }
         else
         {

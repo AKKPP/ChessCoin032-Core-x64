@@ -1,20 +1,19 @@
 TEMPLATE = app
 TARGET = chesscoin-qt
-VERSION = 1.4.5
+VERSION = 1.4.9
 INCLUDEPATH += src src/json src/qt
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
 CONFIG += no_include_pwd
 CONFIG += thread
 CONFIG += static
+CONFIG += sdk_no_version_check
 
-QT  += core gui network multimedia multimediawidgets
+QT += core gui network multimedia multimediawidgets svg concurrent widgets
 
 greaterThan(QT_MAJOR_VERSION, 4) {
     QT += widgets
     DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0
 }
-
-DEFINES += LOCKMODE
 
 # for boost 1.37, add -mt to the boost libraries
 # use: qmake BOOST_LIB_SUFFIX=-mt
@@ -31,38 +30,19 @@ MOC_DIR = build
 UI_DIR = build
 
 
-# <=v1.3.1
-#BOOST_LIB_SUFFIX=
-#BOOST_INCLUDE_PATH=/usr/local/include
-#BOOST_LIB_PATH=/usr/local/lib
-#BDB_INCLUDE_PATH=/usr/local/berkeleydb.18.1.40/include
-#BDB_LIB_PATH=/usr/local/berkeleydb.18.1.40/lib
-#OPENSSL_INCLUDE_PATH=/usr/local/ssl/include
-#OPENSSL_LIB_PATH=/usr/local/ssl/lib
-#QRENCODE_INCLUDE_PATH=/usr/local/include
-#QRENCODE_LIB_PATH=/usr/local/lib
-
-#  v1.4.1
 BOOST_LIB_SUFFIX=
 BOOST_INCLUDE_PATH=/usr/local/boost.1.77.0/include
 BOOST_LIB_PATH=/usr/local/boost.1.77.0/lib
-#BOOST_INCLUDE_PATH=/usr/local/Cellar/boost/1.76.0/include
-#BOOST_LIB_PATH=/usr/local/Cellar/boost/1.76.0/lib
 
 BDB_INCLUDE_PATH=/usr/local/berkeleydb.18.1.40/include
 BDB_LIB_PATH=/usr/local/berkeleydb.18.1.40/lib
-#BDB_INCLUDE_PATH=/usr/local/Cellar/berkeley-db/18.1.40/include
-#BDB_LIB_PATH=/usr/local/Cellar/berkeley-db/18.1.40/lib
+
 
 OPENSSL_INCLUDE_PATH=/usr/local/ssl.1.1.1/include
 OPENSSL_LIB_PATH=/usr/local/ssl.1.1.1/lib
-#OPENSSL_INCLUDE_PATH=/usr/local/Cellar/openssl@1.1/1.1.1l/include
-#OPENSSL_LIB_PATH=/usr/local/Cellar/openssl@1.1/1.1.1l/lib
 
 QRENCODE_INCLUDE_PATH=/usr/local/qrencode-4.1.1/include
 QRENCODE_LIB_PATH=/usr/local/qrencode-4.1.1/lib
-#QRENCODE_INCLUDE_PATH=/usr/local/Cellar/qrencode/4.1.1/include
-#QRENCODE_LIB_PATH=/usr/local/Cellar/qrencode/4.1.1/lib
 
 QRDECODE_INCLUDE_PATH=/usr/local/qzxing
 QRDECODE_LIB_PATH=/usr/local/qzxing/lib
@@ -78,10 +58,12 @@ contains(RELEASE, 1) {
     }
 }
 
+macx:QMAKE_CXXFLAGS += -Wno-enum-constexpr-conversion
+
 !win32 {
 # for extra security against potential buffer overflows: enable GCCs Stack Smashing Protection
 QMAKE_CXXFLAGS *= -fstack-protector-all --param ssp-bufsfer-size=1
-QMAKE_LFLAGS *= -fstack-protector-all --param ssp-buffer-size=1
+#QMAKE_LFLAGS *= -fstack-protector-all --param ssp-buffer-size=1
 # We need to exclude this for Windows cross compile with MinGW 4.2.x, as it will result in a non-working executable!
 # This can be enabled for Windows, when we switch to MinGW >= 4.4.x.
 }
@@ -173,7 +155,9 @@ QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Wno-ignored-qu
 # Input
 DEPENDPATH += src src/json src/qt
 HEADERS += src/qt/bitcoingui.h \
+    src/qt/exitwaitdialog.h \
     src/qt/intro.h \
+    src/qt/qutcdatetimeedit.h \
     src/qt/transactiontablemodel.h \
     src/qt/addresstablemodel.h \
     src/qt/optionsdialog.h \
@@ -265,7 +249,14 @@ HEADERS += src/qt/bitcoingui.h \
     src/clientversion.h \
     src/threadsafety.h \
     src/qt/qtcamera.h \
-    src/qt/trafficgraphwidget.h
+    src/qt/trafficgraphwidget.h \
+    src/ntp.h \
+    src/qt/chatworker.h \
+    src/qt/chatwidget.h \
+    src/memusage.h \
+    src/qt/burncoinsentry.h \
+    src/qt/burncoinsdialog.h \
+	src/qt/sendtimelockdialog.h
 
 SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/intro.cpp \
@@ -331,6 +322,13 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/rpcconsole.cpp \
     src/qt/qtcamera.cpp \
     src/qt/trafficgraphwidget.cpp \
+    src/ntp.cpp \
+    src/qt/chatwidget.cpp \
+    src/qt/chatworker.cpp \
+    src/qt/burncoinsentry.cpp \
+    src/qt/burncoinsdialog.cpp \
+	src/qt/sendtimelockdialog.cpp \
+	src/qt/exitwaitdialog.cpp \
     src/noui.cpp \
     src/kernel.cpp \
     src/scrypt-arm.S \
@@ -354,10 +352,15 @@ RESOURCES += \
     src/qt/res/qdarkstyle/dark/darkstyle.qrc
 
 FORMS += \
+    src/qt/forms/burncoinsdialog.ui \
+    src/qt/forms/burncoinsentry.ui \
+    src/qt/forms/chatwidget.ui \
+    src/qt/forms/exitwaitdialog.ui \
     src/qt/forms/intro.ui \
     src/qt/forms/coincontroldialog.ui \
     src/qt/forms/sendcoinsdialog.ui \
     src/qt/forms/addressbookpage.ui \
+    src/qt/forms/sendtimelockdialog.ui \
     src/qt/forms/signverifymessagedialog.ui \
     src/qt/forms/aboutdialog.ui \
     src/qt/forms/editaddressdialog.ui \
@@ -369,9 +372,9 @@ FORMS += \
     src/qt/forms/optionsdialog.ui
 
 contains(USE_QRCODE, 1) {
-HEADERS += src/qt/qrcodedialog.h
-SOURCES += src/qt/qrcodedialog.cpp
-FORMS += src/qt/forms/qrcodedialog.ui
+    HEADERS += src/qt/qrcodedialog.h
+    SOURCES += src/qt/qrcodedialog.cpp
+    FORMS += src/qt/forms/qrcodedialog.ui
 }
 
 CODECFORTR = UTF-8

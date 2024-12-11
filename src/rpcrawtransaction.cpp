@@ -561,3 +561,36 @@ Value sendrawtransaction(const Array& params, bool fHelp)
 
     return hashTx.GetHex();
 }
+
+Value getmoneysupply(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() > 1)
+        throw runtime_error(
+            "getmoneysupply [blockhash]\n"
+            "If [blockhash] is not specified, returns total moneysupply.\n"
+            "If [blockhash] is specified, returns moneysupply accoring to blockhash.");
+
+    Object result;
+
+    if (params.size() == 1)
+    {
+        std::string strHash = params[0].get_str();
+        uint256 hash(strHash);
+        if (mapBlockIndex.count(hash) == 0)
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
+
+        CBlock block;
+        CBlockIndex* pblockindex = mapBlockIndex[hash];
+        block.ReadFromDisk(pblockindex, true);
+        result.push_back(Pair("moneysupply", ValueFromAmount(pblockindex->nMoneySupply)));
+    }
+    else
+    {
+          CBlockIndex* pblockindex = FindBlockByHeight(nBestHeight);
+          CBlock block;
+          block.ReadFromDisk(pblockindex, true);
+          result.push_back(Pair("moneysupply", ValueFromAmount(pblockindex->nMoneySupply)));
+    }
+
+    return result;
+}

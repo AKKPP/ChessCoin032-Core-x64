@@ -4,6 +4,7 @@
 #include "bitcoinunits.h"
 #include "util.h"
 #include "init.h"
+#include "ntp.h"
 
 #include <QString>
 #include <QDateTime>
@@ -20,6 +21,9 @@
 #include <QThread>
 #include <QTextEdit>
 #include <QTextTable>
+#include <QVBoxLayout>
+#include <QMainWindow>
+#include <QShortcut>
 
 #if (defined (LINUX) || defined (_linux_))
 #include <sys/types.h>
@@ -289,6 +293,11 @@ void openDebugLogfile()
         QDesktopServices::openUrl(QUrl::fromLocalFile(QString::fromStdString(pathDebug.string())));
 }
 
+void handleCloseWindowShortcut(QWidget* w)
+{
+    QObject::connect(new QShortcut(QKeySequence(QObject::tr("Ctrl+Q")), w), &QShortcut::activated, w, &QWidget::close);
+}
+
 ToolTipToRichTextFilter::ToolTipToRichTextFilter(int size_threshold, QObject *parent) :
     QObject(parent), size_threshold(size_threshold)
 {
@@ -435,7 +444,8 @@ bool SetStartOnSystemStartup(bool fAutoStart)
 
         std::string datapath = GetAutostartDir().string();
         //chmod(datapath.c_str(), 755); // S_IRWXU = 448
-        string cmd = "sudo chmod -R a+rwx ";
+        //string cmd = "sudo chmod -R a+rwx ";
+        string cmd = "chmod -R a+rwx ";
         cmd += datapath;
         system(cmd.c_str());
 
@@ -454,7 +464,8 @@ bool SetStartOnSystemStartup(bool fAutoStart)
         optionFile << "Categories=Application\n";
         optionFile.close();
 
-        cmd = "sudo chmod -R a+rwx ";
+        //cmd = "sudo chmod -R a+rwx ";
+        cmd = "chmod -R a+rwx ";
         cmd += GetAutostartFilePath().string();
         system(cmd.c_str());
     }
@@ -589,6 +600,58 @@ QString formatDurationStr(int secs)
     return strList.join(" ");
 }
 
+QString getNTPTime()
+{
+    std::string ntpserver = "time.windows.com";
+    int64_t nTime = NtpGetTime(ntpserver);
+
+    QString ntptime;
+
+    switch (nTime) {
+    case -1:
+        ntptime = "Socket initialization failed";
+        break;
+    case -2:
+        ntptime = "Switching socket mode to non-blocking failed";
+        break;
+    case -3:
+        ntptime = "Unable to send data";
+        break;
+    case -4:
+        ntptime = "Receive timed out";
+        break;
+    default:
+        if (nTime > 0 && nTime != 2085978496) {
+            ntptime = QString::fromStdString(DateTimeStrFormat(nTime));
+        }
+        else {
+            ntptime = "Unexpected response";
+        }
+        break;
+    }
+
+    return ntptime;
+}
+
+QString getNTPTimeForChatroom()
+{
+    std::string ntpserver = "time.windows.com";
+    int64_t nTime = NtpGetTime(ntpserver);
+
+    QString ntptime;
+
+    if (nTime > 0)
+    {
+        ntptime = QString::fromStdString(TimeStrFormat(nTime));
+        return ntptime;
+    }
+
+    // Convert local date and time to UTC
+    QDateTime localDateTime = QDateTime::currentDateTime();
+    QDateTime utcDateTime = localDateTime.toUTC();
+    return utcDateTime.toString("[hh:mm:ss] ");
+}
+
 QClickableLabel::QClickableLabel(QWidget *parent)
     : QLabel(parent)
 {
@@ -600,6 +663,25 @@ void QClickableLabel::mouseReleaseEvent(QMouseEvent* event)
     emit clicked(event->pos());
 }
 
+QHoverLabel::QHoverLabel(QWidget *parent)
+    : QClickableLabel(parent)
+{
+
+}
+
+void QHoverLabel::enterEvent(QEvent *event)
+{
+    QString strTip = QString(tr("NTP Server Time: %1 ")).arg(getNTPTime());
+    QToolTip::showText(mapToGlobal(QPoint(0, 0)), strTip);
+    QLabel::enterEvent(event);
+}
+
+void QHoverLabel::focusInEvent(QFocusEvent *event)
+{
+    QString strTip = QString(tr("NTP Server Time: %1 ")).arg(getNTPTime());
+    QToolTip::showText(mapToGlobal(QPoint(0, 0)), strTip);
+    QLabel::focusInEvent(event);
+}
 
 } // namespace GUIUtil
 

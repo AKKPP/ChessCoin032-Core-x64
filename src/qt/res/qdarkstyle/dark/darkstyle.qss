@@ -401,7 +401,9 @@ QMenu::separator {
 
 QMenu::item {
   background-color: #37414F;
-  padding: 4px 24px 4px 28px;
+  /* padding: 4px 24px 4px 28px; ubuntu & mac */
+  /* padding: 4px 8px 4px 12px; windows */
+  padding: 4px 8px 4px 12px;
   /* Reserve space for selection border */
   border: 1px transparent #455364;
 }
@@ -417,8 +419,8 @@ QMenu::item:pressed {
 
 QMenu::icon {
   padding-left: 10px;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
 }
 
 QMenu::indicator {
@@ -1966,7 +1968,6 @@ QHeaderView::section {
   color: #E0E1E3;
   border-radius: 0;
   text-align: left;
-  font-size: 13px;
 }
 
 QHeaderView::section::horizontal {

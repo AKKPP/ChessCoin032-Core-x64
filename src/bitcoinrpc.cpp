@@ -244,8 +244,8 @@ Value stop(const Array& params, bool fHelp)
 static const CRPCCommand vRPCCommands[] =
 { //  name                      function                 safemd  unlocked
   //  ------------------------  -----------------------  ------  --------
-    { "help",                   &help,                   true,   true },
-    { "stop",                   &stop,                   true,   true },
+    { "help",                   &help,                   true,   true  },
+    { "stop",                   &stop,                   true,   true  },
     { "getbestblockhash",       &getbestblockhash,       true,   false },
     { "getblockcount",          &getblockcount,          true,   false },
     { "getconnectioncount",     &getconnectioncount,     true,   false },
@@ -308,14 +308,19 @@ static const CRPCCommand vRPCCommands[] =
     { "signrawtransaction",     &signrawtransaction,     false,  false },
     { "sendrawtransaction",     &sendrawtransaction,     false,  false },
     { "getcheckpoint",          &getcheckpoint,          true,   false },
-    { "reservebalance",         &reservebalance,         false,  true},
-    { "checkwallet",            &checkwallet,            false,  true},
-    { "repairwallet",           &repairwallet,           false,  true},
-    { "resendtx",               &resendtx,               false,  true},
-    { "makekeypair",            &makekeypair,            false,  true},
-    { "sendalert",              &sendalert,              false,  false},
-    { "getblockchaininfo",      &getblockchaininfo,      true,   false},
-    { "getnetworkinfo",         &getnetworkinfo,         true,   false},
+    { "reservebalance",         &reservebalance,         false,  true  },
+    { "checkwallet",            &checkwallet,            false,  true  },
+    { "repairwallet",           &repairwallet,           false,  true  },
+    { "resendtx",               &resendtx,               false,  true  },
+    { "makekeypair",            &makekeypair,            false,  true  },
+    { "sendalert",              &sendalert,              false,  false },
+    { "getblockchaininfo",      &getblockchaininfo,      true,   false },
+    { "getnetworkinfo",         &getnetworkinfo,         true,   false },
+    { "getnetworkhashps",       &getnetworkhashps,       true,   false },
+    { "getnetstat",             &getnetstat,             true,   false },
+    { "ntptime",                &ntptime,                true,   false },
+    { "getmempoolinfo",         &getmempoolinfo,         true,   false },
+    { "getmoneysupply",         &getmoneysupply,         true,   false },
 };
 
 CRPCTable::CRPCTable()
@@ -1317,6 +1322,11 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "signrawtransaction"     && n > 1) ConvertTo<Array>(params[1], true);
     if (strMethod == "signrawtransaction"     && n > 2) ConvertTo<Array>(params[2], true);
     if (strMethod == "keypoolrefill"          && n > 0) ConvertTo<int64_t>(params[0]);
+
+    if (strMethod == "getnetworkhashps"       && n > 0) ConvertTo<int64_t>(params[0]);
+    if (strMethod == "getnetworkhashps"       && n > 1) ConvertTo<int64_t>(params[1]);
+
+    if (strMethod == "getmoneysupply"         && n > 1) ConvertTo<int64_t>(params[1]);
 
     return params;
 }
