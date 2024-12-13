@@ -1659,8 +1659,8 @@ Ta oznaka se obarva rdeče, če je prioriteta manjša kot &quot;srednja&quot;.
         <location line="+86"/>
         <location line="+86"/>
         <location line="+32"/>
-        <source>0.00 BC</source>
-        <translation>123.456 BC {0.00 ?}</translation>
+        <source>0.00 CHESS</source>
+        <translation>123.456 CHESS {0.00 ?}</translation>
     </message>
     <message>
         <location line="-191"/>

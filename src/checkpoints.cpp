@@ -29,13 +29,19 @@ namespace Checkpoints
         boost::assign::map_list_of
         ( 0,        std::make_pair(hashGenesisBlock, 1465133106) )
         ( 2040000,  std::make_pair(uint256("0x8a9cbd23dbbb98c89bbac1f5c91ae24ec06dd9299506943913caed9a32b50393"), 1597328874) )
+        ( 2090000,  std::make_pair(uint256("0x83229c4a6d27b666e83edf2062c3679c98626b280f7792522c2032da55abe2c6"), 1617822187) )
+        ( 2140000,  std::make_pair(uint256("0xedc721d43b89d70b3bcb61b46d7cf9024c6c28abc82da3b7abf5bb85af6d9478"), 1638699227) )
+        ( 2190000,  std::make_pair(uint256("0xb5fac1e6df7598d545f9dac0c187643ad3ad0bb8686a191f7a894dbaae37dc80"), 1659375481) )
+        ( 2240000,  std::make_pair(uint256("0x7dfdc94a2b979ccd03176499990f386888a409a1e151fdbad4746a7943265133"), 1679362477) )
+        ( 2290000,  std::make_pair(uint256("0x99cdc5366a05609aa9d83b91a8d76ba84d2f6bdd5ae937cee08bbeec72bc0ed7"), 1699838949) )
+        ( 2340000,  std::make_pair(uint256("0xa855f4317fffd57bca268e3b588fe0ae490af1976a9582eff4125b50d8881ea7"), 1720021635) )
     ;
 
     // TestNet has no checkpoints
     static MapCheckpoints mapCheckpointsTestnet =
         boost::assign::map_list_of
         ( 0,       std::make_pair(hashGenesisBlock, 1465133106) )
-        ;
+    ;
 
     bool CheckHardened(int nHeight, const uint256& hash)
     {
@@ -75,8 +81,8 @@ namespace Checkpoints
     }
 
     // ppcoin: synchronized checkpoint (centrally broadcasted)
-    uint256 hashSyncCheckpoint = 0;
-    uint256 hashPendingCheckpoint = 0;
+    uint256 hashSyncCheckpoint("0x8a9cbd23dbbb98c89bbac1f5c91ae24ec06dd9299506943913caed9a32b50393");
+    uint256 hashPendingCheckpoint("0xa855f4317fffd57bca268e3b588fe0ae490af1976a9582eff4125b50d8881ea7");
     CSyncCheckpoint checkpointMessage;
     CSyncCheckpoint checkpointMessagePending;
     uint256 hashInvalidCheckpoint = 0;

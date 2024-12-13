@@ -58,6 +58,7 @@
 		<file alias="burn">res/icons/burn.png</file>
 		<file alias="up">res/icons/up.png</file>
 		<file alias="from">res/icons/from.png</file>
+		<file alias="find">res/icons/find.png</file>
 	</qresource>
     <qresource prefix="/images">
         <file alias="about">res/images/about.png</file>

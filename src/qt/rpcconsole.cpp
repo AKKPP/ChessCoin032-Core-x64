@@ -19,7 +19,6 @@
 // TODO: make it possible to filter out categories (esp debug messages when implemented)
 // TODO: receive errors and debug messages through ClientModel
 
-const int CONSOLE_SCROLLBACK = 50;
 const int CONSOLE_HISTORY = 50;
 const int INITIAL_TRAFFIC_GRAPH_MINS = 30;
 
@@ -190,14 +189,14 @@ void RPCExecutor::request(const QString &command)
 RPCConsole::RPCConsole(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::RPCConsole),
-    elapsedTimer(0),
-    historyPtr(0)
+    historyPtr(0),
+    elapsedTimer(0)
 {
     ui->setupUi(this);
 
 #if (defined (WIN32) || defined (WIN64))
-    resize(720, 610);
-    setMinimumSize(720, 610);
+    resize(750, 610);
+    setMinimumSize(750, 610);
 #elif (defined (LINUX) || defined (__linux__))
     resize(820, 670);
     setMinimumSize(820, 670);

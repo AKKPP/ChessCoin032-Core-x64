@@ -23,6 +23,38 @@ class CTransaction;
 
 static const unsigned int MAX_SCRIPT_ELEMENT_SIZE = 520; // bytes
 
+/* Setting nSequence to this value for every input in a transaction
+ * disables nLockTime. */
+static const uint32_t SEQUENCE_FINAL = 0xffffffff;
+
+/* Threshold for inverted nSequence: below this value it is interpreted
+ * as a relative lock-time, otherwise ignored. */
+static const uint32_t SEQUENCE_THRESHOLD = (1 << 31);
+
+/* If this flag set, CTxIn::nSequence is NOT interpreted as a
+ * relative lock-time. */
+static const uint32_t SEQUENCE_LOCKTIME_DISABLE_FLAG = (1 << 31);
+
+/* If CTxIn::nSequence encodes a relative lock-time and this flag
+ * is set, the relative lock-time has units of 512 seconds,
+ * otherwise it specifies blocks with a granularity of 1. */
+static const uint32_t SEQUENCE_LOCKTIME_TYPE_FLAG = (1 << 22);
+
+/* If CTxIn::nSequence encodes a relative lock-time, this mask is
+ * applied to extract that lock-time from the sequence field. */
+static const uint32_t SEQUENCE_LOCKTIME_MASK = 0x0000ffff;
+
+/** IsMine() return codes */
+enum isminetype
+{
+    MINE_NO = 0,
+    MINE_WATCH_ONLY = 1,
+    MINE_SPENDABLE = 2,
+    MINE_ALL = MINE_WATCH_ONLY | MINE_SPENDABLE
+};
+
+typedef uint8_t isminefilter;
+
 /** Signature hash types/flags */
 enum
 {
@@ -32,6 +64,49 @@ enum
     SIGHASH_ANYONECANPAY = 0x80,
 };
 
+/** Script verification flags */
+enum
+{
+    SCRIPT_VERIFY_NONE      = 0,
+    SCRIPT_VERIFY_P2SH      = (1U << 0), // evaluate P2SH (BIP16) subscripts
+    SCRIPT_VERIFY_STRICTENC = (1U << 1), // enforce strict conformance to DER and SEC2 for signatures and pubkeys
+    SCRIPT_VERIFY_LOW_S     = (1U << 2), // enforce low S values in signatures (depends on STRICTENC)
+    SCRIPT_VERIFY_NOCACHE   = (1U << 3), // do not store results in signature cache (but do query it)
+    SCRIPT_VERIFY_NULLDUMMY = (1U << 4),  // verify dummy stack item consumed by CHECKMULTISIG is of zero-length
+    SCRIPT_VERIFY_CHECKLOCKTIMEVERIFY = (1U << 9),
+    SCRIPT_VERIFY_CHECKSEQUENCEVERIFY = (1U << 10)
+};
+
+// Strict verification:
+//
+// * force DER encoding;
+// * force low S;
+// * ensure that CHECKMULTISIG dummy argument is null.
+static const unsigned int STRICT_FORMAT_FLAGS = SCRIPT_VERIFY_STRICTENC | SCRIPT_VERIFY_LOW_S | SCRIPT_VERIFY_NULLDUMMY;
+
+// Mandatory script verification flags that all new blocks must comply with for
+// them to be valid. (but old blocks may not comply with) Currently just P2SH,
+// but in the future other flags may be added, such as a soft-fork to enforce
+// strict DER encoding.
+//
+// Failing one of these tests may trigger a DoS ban - see ConnectInputs() for
+// details.
+static const unsigned int MANDATORY_SCRIPT_VERIFY_FLAGS = SCRIPT_VERIFY_P2SH;
+
+// Standard script verification flags that standard transactions will comply
+// with. However scripts violating these flags may still be present in valid
+// blocks and we must accept those blocks.
+static const unsigned int STRICT_FLAGS = MANDATORY_SCRIPT_VERIFY_FLAGS | STRICT_FORMAT_FLAGS;
+
+// Standard script verification flags that standard transactions will comply
+// with. However scripts violating these flags may still be present in valid
+// blocks and we must accept those blocks.
+static const unsigned int STANDARD_SCRIPT_VERIFY_FLAGS = MANDATORY_SCRIPT_VERIFY_FLAGS |
+                                                         SCRIPT_VERIFY_STRICTENC |
+                                                         SCRIPT_VERIFY_NULLDUMMY;
+
+// For convenience, standard but not mandatory verify flags.
+static const unsigned int STANDARD_NOT_MANDATORY_VERIFY_FLAGS = STANDARD_SCRIPT_VERIFY_FLAGS & ~MANDATORY_SCRIPT_VERIFY_FLAGS;
 
 enum txnouttype
 {
@@ -42,6 +117,8 @@ enum txnouttype
     TX_SCRIPTHASH,
     TX_MULTISIG,
     TX_NULL_DATA,
+    TX_PUBKEY_DROP,
+    TX_CLTV,
 };
 
 class CNoDestination {
@@ -100,6 +177,8 @@ enum opcodetype
     OP_ENDIF = 0x68,
     OP_VERIFY = 0x69,
     OP_RETURN = 0x6a,
+    OP_CHECKLOCKTIMEVERIFY = 0xb1,
+    OP_CHECKSEQUENCEVERIFY = 0xb2,
 
     // stack ops
     OP_TOALTSTACK = 0x6b,
@@ -185,8 +264,8 @@ enum opcodetype
 
     // expansion
     OP_NOP1 = 0xb0,
-    OP_NOP2 = 0xb1,
-    OP_NOP3 = 0xb2,
+    //OP_NOP2 = 0xb1,
+    //OP_NOP3 = 0xb2,
     OP_NOP4 = 0xb3,
     OP_NOP5 = 0xb4,
     OP_NOP6 = 0xb5,
@@ -196,8 +275,10 @@ enum opcodetype
     OP_NOP10 = 0xb9,
 
     // template matching params
+    OP_SMALLDATA = 0xf9,
     OP_SMALLINTEGER = 0xfa,
     OP_PUBKEYS = 0xfb,
+    OP_INTEGER = 0xfc,
     OP_PUBKEYHASH = 0xfd,
     OP_PUBKEY = 0xfe,
 
@@ -425,7 +506,7 @@ public:
         // Immediate operand
         if (opcode <= OP_PUSHDATA4)
         {
-            unsigned int nSize;
+            unsigned int nSize = OP_0;
             if (opcode < OP_PUSHDATA1)
             {
                 nSize = opcode;
@@ -519,6 +600,9 @@ public:
 
     bool IsPayToScriptHash() const;
     bool IsPayToPubKeyHash() const;
+    bool IsPayToCLTV() const;
+
+    bool IsCLTVSpendable(int nHeight, int64_t nTime) const;
 
     // Called by IsStandardTx and P2SH VerifyScript (which makes it consensus-critical).
     bool IsPushOnly() const
@@ -570,7 +654,93 @@ public:
     }
 };
 
+class CScriptNum
+{
+private:
+    int64_t m_value;
 
+public:
+    static const size_t nMaxNumSize = 4; // Maximum bytes for numbers in Bitcoin scripts
+
+    CScriptNum() : m_value(0) {}
+    CScriptNum(int64_t value) : m_value(value) {}
+
+    explicit CScriptNum(const std::vector<unsigned char>& vch, bool fRequireMinimal = true)
+    {
+        if (vch.size() > nMaxNumSize) {
+            throw std::runtime_error("CScriptNum: numeric value too large");
+        }
+
+        if (fRequireMinimal && !isMinimallyEncoded(vch)) {
+            throw std::runtime_error("CScriptNum: non-minimally encoded number");
+        }
+
+        m_value = deserialize(vch);
+    }
+
+    int64_t getValue() const { return m_value; }
+
+    std::vector<unsigned char> getvch() const { return serialize(m_value); }
+
+    static int64_t deserialize(const std::vector<unsigned char>& vch)
+    {
+        if (vch.empty()) {
+            return 0;
+        }
+
+        int64_t n = 0;
+        for (size_t i = 0; i < vch.size(); ++i) {
+            n |= int64_t(vch[i]) << (8 * i);
+        }
+
+        // If the most significant byte is set, subtract the corresponding value.
+        if (vch.back() & 0x80) {
+            n -= int64_t(1) << (8 * (vch.size() - 1));
+        }
+        return n;
+    }
+
+    static std::vector<unsigned char> serialize(int64_t value)
+    {
+        if (value == 0) {
+            return {};
+        }
+
+        std::vector<unsigned char> result;
+        bool negative = value < 0;
+        uint64_t absvalue = negative ? -value : value;
+
+        while (absvalue) {
+            result.push_back(absvalue & 0xFF);
+            absvalue >>= 8;
+        }
+
+        // If the most significant byte is >= 0x80, add a new byte for the sign bit.
+        if (result.back() & 0x80) {
+            result.push_back(negative ? 0x80 : 0x00);
+        } else if (negative) {
+            result.back() |= 0x80;
+        }
+
+        return result;
+    }
+
+    static bool isMinimallyEncoded(const std::vector<unsigned char>& vch)
+    {
+        if (vch.empty()) {
+            return true;
+        }
+
+        // Check that the most significant byte is not zero.
+        if ((vch.back() & 0x7f) == 0) {
+            // If the second most significant byte exists and is zero, then not minimally encoded.
+            if (vch.size() > 1 && (vch[vch.size() - 2] & 0x80) == 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+};
 
 
 
@@ -582,6 +752,7 @@ bool IsMine(const CKeyStore& keystore, const CScript& scriptPubKey);
 bool IsMine(const CKeyStore& keystore, const CTxDestination &dest);
 void ExtractAffectedKeys(const CKeyStore &keystore, const CScript& scriptPubKey, std::vector<CKeyID> &vKeys);
 bool ExtractDestination(const CScript& scriptPubKey, CTxDestination& addressRet);
+bool ExtractDestination(const CTxDestination& dest, CKeyID & key);
 bool ExtractDestinations(const CScript& scriptPubKey, txnouttype& typeRet, std::vector<CTxDestination>& addressRet, int& nRequiredRet);
 bool SignSignature(const CKeyStore& keystore, const CScript& fromPubKey, CTransaction& txTo, unsigned int nIn, int nHashType=SIGHASH_ALL);
 bool SignSignature(const CKeyStore& keystore, const CTransaction& txFrom, CTransaction& txTo, unsigned int nIn, int nHashType=SIGHASH_ALL);

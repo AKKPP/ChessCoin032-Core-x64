@@ -452,6 +452,13 @@ public:
         else
             *this = 0;
     }
+
+    // Helper function to convert to std::vector<unsigned char>
+    std::vector<unsigned char> ToVector() const {
+        std::vector<unsigned char> vec(WIDTH * sizeof(unsigned int));
+        memcpy(vec.data(), pn, vec.size());
+        return vec;
+    }
 };
 
 inline bool operator==(const uint160& a, uint64_t b)                         { return (base_uint160)a == b; }

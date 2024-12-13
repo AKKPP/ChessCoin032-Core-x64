@@ -1,8 +1,8 @@
 TEMPLATE = app
 TARGET = chesscoin-qt
-VERSION = 1.4.9
+VERSION = 1.5.0
 INCLUDEPATH += src src/json src/qt
-DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
+DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE QT_SUPPORTSSL
 CONFIG += no_include_pwd
 CONFIG += thread
 CONFIG += static
@@ -155,9 +155,9 @@ QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Wno-ignored-qu
 # Input
 DEPENDPATH += src src/json src/qt
 HEADERS += src/qt/bitcoingui.h \
-    src/qt/exitwaitdialog.h \
+    src/curlnet.h \
     src/qt/intro.h \
-    src/qt/qutcdatetimeedit.h \
+    src/qt/jsonhighlighter.h \
     src/qt/transactiontablemodel.h \
     src/qt/addresstablemodel.h \
     src/qt/optionsdialog.h \
@@ -248,6 +248,8 @@ HEADERS += src/qt/bitcoingui.h \
     src/netbase.h \
     src/clientversion.h \
     src/threadsafety.h \
+    src/checkqueue.h \
+    src/timestamps.h \
     src/qt/qtcamera.h \
     src/qt/trafficgraphwidget.h \
     src/ntp.h \
@@ -256,7 +258,9 @@ HEADERS += src/qt/bitcoingui.h \
     src/memusage.h \
     src/qt/burncoinsentry.h \
     src/qt/burncoinsdialog.h \
-	src/qt/sendtimelockdialog.h
+	src/qt/blockbrowser.h \
+	src/qt/sendtimelockdialog.h \
+	src/qt/calctimestampdlg.h
 
 SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/intro.cpp \
@@ -327,8 +331,9 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/chatworker.cpp \
     src/qt/burncoinsentry.cpp \
     src/qt/burncoinsdialog.cpp \
+	src/qt/blockbrowser.cpp \
 	src/qt/sendtimelockdialog.cpp \
-	src/qt/exitwaitdialog.cpp \
+	src/qt/calctimestampdlg.cpp \
     src/noui.cpp \
     src/kernel.cpp \
     src/scrypt-arm.S \
@@ -352,10 +357,11 @@ RESOURCES += \
     src/qt/res/qdarkstyle/dark/darkstyle.qrc
 
 FORMS += \
+    src/qt/forms/blockbrowser.ui \
     src/qt/forms/burncoinsdialog.ui \
     src/qt/forms/burncoinsentry.ui \
+    src/qt/forms/calctimestampdlg.ui \
     src/qt/forms/chatwidget.ui \
-    src/qt/forms/exitwaitdialog.ui \
     src/qt/forms/intro.ui \
     src/qt/forms/coincontroldialog.ui \
     src/qt/forms/sendcoinsdialog.ui \

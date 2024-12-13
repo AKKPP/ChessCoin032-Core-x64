@@ -20,6 +20,7 @@ class AboutDialog;
 class OptionsDialog;
 class QChatWidget;
 class BurnCoinsDialog;
+class BlockBrowser;
 
 QT_BEGIN_NAMESPACE
 class QLabel;
@@ -75,6 +76,7 @@ private:
     SignVerifyMessageDialog *signVerifyMessageDialog;
     QChatWidget *chatPage;
     BurnCoinsDialog *burnCoinsPage;
+    BlockBrowser *blockBrowser;
 
     QLabel *labelEncryptionIcon;
     GUIUtil::QHoverLabel *labelNTPTimeIcon;
@@ -112,7 +114,11 @@ private:
     QAction *chessResetAction;
     QAction *chatAction;
     QAction *burnCoinsAction;
-
+    QAction *explorerAction;
+#ifdef SENDTIMLOCK
+    QAction *sendTimelockAction;
+#endif
+    
     QSystemTrayIcon *trayIcon;
     Notificator *notificator;
     TransactionView *transactionView;
@@ -214,6 +220,10 @@ private slots:
 
     void gotoChatRoomPage();    
     void gotoBurnCoinsPage();
+    void gotoBlockBrowser();
+#ifdef SENDTIMLOCK
+	void showSendTimelockDialog();
+#endif
 };
 
 #endif

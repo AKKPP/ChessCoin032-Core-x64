@@ -8,6 +8,7 @@
 #include "wallet.h"
 #include "walletdb.h" // for BackupWallet
 #include "base58.h"
+#include "script.h"
 
 #include <QSet>
 #include <QTimer>
@@ -151,7 +152,26 @@ bool WalletModel::validateAddress(const QString &address)
     return addressParsed.IsValid();
 }
 
-WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipient> &recipients, const CCoinControl *coinControl)
+static std::vector<unsigned char> SerializeLockTime(uint32_t nLockTime)
+{
+    std::vector<unsigned char> locktimeBytes;
+
+    while (nLockTime > 0)
+    {
+        locktimeBytes.push_back(static_cast<unsigned char>(nLockTime & 0xFF));
+        nLockTime >>= 8;
+    }
+
+    // Ensure minimal encoding (no unnecessary leading zero bytes)
+    if (!locktimeBytes.empty() && (locktimeBytes.back() & 0x80))
+    {
+        locktimeBytes.push_back(0x00);
+    }
+
+    return locktimeBytes;
+}
+
+WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipient> &recipients, const CCoinControl *coinControl, uint32_t nLockTime)
 {
     qint64 total = 0;
     QSet<QString> setAddress;
@@ -203,36 +223,82 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
     {
         LOCK2(cs_main, wallet->cs_wallet);
 
+        // Declare and initialize the wallet transaction
+        CWalletTx wtx;
+
         // Sendmany
         std::vector<std::pair<CScript, int64_t> > vecSend;
         foreach(const SendCoinsRecipient &rcp, recipients)
         {
             CScript scriptPubKey;
-            scriptPubKey.SetDestination(CBitcoinAddress(rcp.address.toStdString()).Get());
+
+            if (nLockTime > 0)
+            {
+                CTxDestination dest = CBitcoinAddress(rcp.address.toStdString()).Get();
+
+                CKeyID keyID;
+                if (!ExtractDestination(dest, keyID))
+                    throw std::runtime_error("Invalid destination address");
+
+                // 1. Add the timelock script (LOCKTIMEVERIFY + DROP)
+                CScriptNum lockTime(nLockTime);
+                scriptPubKey << lockTime.getvch();
+                scriptPubKey << OP_CHECKLOCKTIMEVERIFY << OP_DROP;
+
+                // 2. Add the standard P2PKH script
+                CScript p2pkhScript;
+                p2pkhScript << OP_DUP << OP_HASH160;
+                p2pkhScript << keyID.ToVector();  // Add the destination address
+                p2pkhScript << OP_EQUALVERIFY << OP_CHECKSIG;  // Standard P2PKH check
+
+                // Combine both scripts into one
+                scriptPubKey += p2pkhScript;
+            }
+            else
+            {
+                // Standard output
+                scriptPubKey.SetDestination(CBitcoinAddress(rcp.address.toStdString()).Get());
+            }
+
             vecSend.push_back(make_pair(scriptPubKey, rcp.amount));
         }
 
-        CWalletTx wtx;
         CReserveKey keyChange(wallet);
         int64_t nFeeRequired = 0;
-        bool fCreated = wallet->CreateTransaction(vecSend, wtx, keyChange, nFeeRequired, coinControl);
-
+        bool fCreated = wallet->CreateTransaction(vecSend, wtx, keyChange, nFeeRequired, coinControl, nLockTime);
         if(!fCreated)
         {
             if((total + nFeeRequired) > nBalance) // FIXME: could cause collisions in the future
-            {
                 return SendCoinsReturn(AmountWithFeeExceedsBalance, nFeeRequired);
-            }
+
             return TransactionCreationFailed;
         }
+
         if(!uiInterface.ThreadSafeAskFee(nFeeRequired, tr("Sending...").toStdString()))
-        {
             return Aborted;
-        }
-        if(!wallet->CommitTransaction(wtx, keyChange))
+
+        if (nLockTime > 0)
         {
-            return TransactionCommitFailed;
+            // Check for conflicts with existing transactions
+            for (auto& vin : wtx.vin) {
+                if (wallet->mapWallet.count(vin.prevout.hash)) {
+                    const CWalletTx& prevTx = wallet->mapWallet[vin.prevout.hash];
+                    if (prevTx.GetDepthInMainChain() < 1 && !prevTx.IsTrusted()) { // Check if it's confirmed
+                        return TransactionCreationFailed; // Prevent sending if it conflicts with an unconfirmed transaction
+                    }
+                }
+            }
+
+            // Setting sequence number for all inputs to ensure locktime is respected
+            for (auto& vin : wtx.vin)
+            {
+                vin.nSequence = (nLockTime > 0) ? SEQUENCE_FINAL - 1 : SEQUENCE_FINAL;
+            }
         }
+
+        if(!wallet->CommitTransaction(wtx, keyChange))
+            return TransactionCommitFailed;
+
         hex = QString::fromStdString(wtx.GetHash().GetHex());
     }
 

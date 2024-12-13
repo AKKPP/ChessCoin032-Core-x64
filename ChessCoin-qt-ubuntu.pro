@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = chesscoin-qt
-VERSION = 1.4.9
+VERSION = 1.5.0
 INCLUDEPATH += src src/json src/qt
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
 CONFIG += no_include_pwd
@@ -47,6 +47,9 @@ QRENCODE_LIB_PATH=/usr/local/lib
 QRDECODE_INCLUDE_PATH=/usr/local/qzxing
 QRDECODE_LIB_PATH=/usr/local/qzxing/lib
 
+CURL_INCLUDE_PATH=/usr/local/curl-8.11.0/include
+CURL_LIB_PATH=/usr/local/curl-8.11.0/lib/
+
 # use: qmake "RELEASE=1"
 contains(RELEASE, 1) {
     # Mac: compile for maximum compatibility (10.5, 32-bit)
@@ -85,7 +88,7 @@ win32:QMAKE_LFLAGS_RELEASE -= -Wl,-s
 
 ## Windows Debug help Bug
 #win32:QMAKE_LFLAGS += -static-libgcc -static-libstdc++
-## Windows Debug help Bug
+
 
 # use: qmake "USE_QRCODE=1"
 # libqrencode (http://fukuchi.org/works/qrencode/index.en.html) must be installed for support
@@ -190,9 +193,9 @@ QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Wno-ignored-qu
 # Input
 DEPENDPATH += src src/json src/qt
 HEADERS += src/qt/bitcoingui.h \
-    src/qt/exitwaitdialog.h \
+    src/curlnet.h \
     src/qt/intro.h \
-    src/qt/qutcdatetimeedit.h \
+    src/qt/jsonhighlighter.h \
     src/qt/transactiontablemodel.h \
     src/qt/addresstablemodel.h \
     src/qt/optionsdialog.h \
@@ -293,7 +296,9 @@ HEADERS += src/qt/bitcoingui.h \
     src/memusage.h \
     src/qt/burncoinsentry.h \
     src/qt/burncoinsdialog.h \
-	src/qt/sendtimelockdialog.h
+	src/qt/blockbrowser.h \
+	src/qt/sendtimelockdialog.h \
+	src/qt/calctimestampdlg.h
 
 SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/intro.cpp \
@@ -364,8 +369,9 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/chatworker.cpp \
     src/qt/burncoinsentry.cpp \
     src/qt/burncoinsdialog.cpp \
+	src/qt/blockbrowser.cpp \
 	src/qt/sendtimelockdialog.cpp \
-	src/qt/exitwaitdialog.cpp \
+	src/qt/calctimestampdlg.cpp \
     src/noui.cpp \
     src/kernel.cpp \
     src/scrypt-arm.S \
@@ -389,10 +395,11 @@ RESOURCES += \
     src/qt/res/qdarkstyle/dark/darkstyle.qrc
 
 FORMS += \
+    src/qt/forms/blockbrowser.ui \
     src/qt/forms/burncoinsdialog.ui \
     src/qt/forms/burncoinsentry.ui \
+    src/qt/forms/calctimestampdlg.ui \
     src/qt/forms/chatwidget.ui \
-    src/qt/forms/exitwaitdialog.ui \
     src/qt/forms/intro.ui \
     src/qt/forms/coincontroldialog.ui \
     src/qt/forms/sendcoinsdialog.ui \
@@ -456,8 +463,11 @@ windows:!contains(MINGW_THREAD_BUGFIX, 0) {
 }
 
 # Set libraries and includes at end, to use platform-defined defaults if not overridden
-INCLUDEPATH += $$BOOST_INCLUDE_PATH $$BDB_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$QRENCODE_INCLUDE_PATH $$QRDECODE_INCLUDE_PATH
+INCLUDEPATH += $$BOOST_INCLUDE_PATH $$BDB_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$QRENCODE_INCLUDE_PATH $$QRDECODE_INCLUDE_PATH $$CURL_INCLUDE_PATH
 DEPENDPATH += $$BOOST_LIB_PATH
+
+LIBS += $$join(CURL_LIB_PATH,,-L,)
+LIBS += -lcurl
 
 LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(BDB_LIB_PATH,,-L,) $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,)  $$join(QRDECODE_LIB_PATH,,-L,)
 LIBS += -lssl -lcrypto -ldb_cxx -lz

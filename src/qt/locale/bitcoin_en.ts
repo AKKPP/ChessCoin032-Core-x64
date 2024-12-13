@@ -1677,8 +1677,8 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
         <location line="+86"/>
         <location line="+86"/>
         <location line="+32"/>
-        <source>0.00 BC</source>
-        <translation type="unfinished">123.456 BC {0.00 ?}</translation>
+        <source>0.00 CHESS</source>
+        <translation type="unfinished">123.456 CHESS {0.00 ?}</translation>
     </message>
     <message>
         <location line="-191"/>

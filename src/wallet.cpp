@@ -148,8 +148,10 @@ bool CWallet::Unlock(const SecureString& strWalletPassphrase)
         {
             if(!crypter.SetKeyFromPassphrase(strWalletPassphrase, pMasterKey.second.vchSalt, pMasterKey.second.nDeriveIterations, pMasterKey.second.nDerivationMethod))
                 return false;
+
             if (!crypter.Decrypt(pMasterKey.second.vchCryptedKey, vMasterKey))
                 return false;
+
             if (CCryptoKeyStore::Unlock(vMasterKey))
                 return true;
         }
@@ -383,7 +385,7 @@ void CWallet::WalletUpdateSpent(const CTransaction &tx, bool fBlock)
                     printf("WalletUpdateSpent: bad wtx %s\n", wtx.GetHash().ToString().c_str());
                 else if (!wtx.IsSpent(txin.prevout.n) && IsMine(wtx.vout[txin.prevout.n]))
                 {
-                    printf("WalletUpdateSpent found spent coin %s BC %s\n", FormatMoney(wtx.GetCredit()).c_str(), wtx.GetHash().ToString().c_str());
+                    printf("WalletUpdateSpent found spent coin %s CHESS %s\n", FormatMoney(wtx.GetCredit()).c_str(), wtx.GetHash().ToString().c_str());
                     wtx.MarkSpent(txin.prevout.n);
                     wtx.WriteToDisk();
                     NotifyTransactionChanged(this, txin.prevout.hash, CT_UPDATED);
@@ -911,7 +913,7 @@ void CWallet::ReacceptWalletTransactions()
                 }
                 if (fUpdated)
                 {
-                    printf("ReacceptWalletTransactions found spent coin %s BC %s\n", FormatMoney(wtx.GetCredit()).c_str(), wtx.GetHash().ToString().c_str());
+                    printf("ReacceptWalletTransactions found spent coin %s CHESS %s\n", FormatMoney(wtx.GetCredit()).c_str(), wtx.GetHash().ToString().c_str());
                     wtx.MarkDirty();
                     wtx.WriteToDisk();
                 }
@@ -1080,9 +1082,10 @@ void CWallet::AvailableCoins(vector<COutput>& vCoins, bool fOnlyConfirmed, const
 
     {
         LOCK2(cs_main, cs_wallet);
-        for (map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
+
+        for (auto it = mapWallet.begin(); it != mapWallet.end(); ++it)
         {
-            const CWalletTx* pcoin = &(*it).second;
+             CWalletTx* pcoin = const_cast<CWalletTx*>(&it->second);
 
             if (!IsFinalTx(*pcoin))
                 continue;
@@ -1101,9 +1104,22 @@ void CWallet::AvailableCoins(vector<COutput>& vCoins, bool fOnlyConfirmed, const
                 continue;
 
             for (unsigned int i = 0; i < pcoin->vout.size(); i++)
-                if (!(pcoin->IsSpent(i)) && IsMine(pcoin->vout[i]) && pcoin->vout[i].nValue >= nMinimumInputValue &&
+            {
+                const CTxOut &txout = pcoin->vout[i];
+
+#ifdef CLTV
+                if (txout.nValue <= 0)
+                    continue;
+
+                if (txout.scriptPubKey.IsPayToCLTV() && !txout.scriptPubKey.IsCLTVSpendable(nBestHeight, GetAdjustedTime())) {
+                    continue;
+                }
+#endif
+
+                if (!(pcoin->IsSpent(i)) && IsMine(txout) && txout.nValue >= nMinimumInputValue &&
                 (!coinControl || !coinControl->HasSelected() || coinControl->IsSelected((*it).first, i)))
                     vCoins.push_back(COutput(pcoin, i, nDepth));
+            }
 
         }
     }
@@ -1115,9 +1131,10 @@ void CWallet::AvailableCoinsForStaking(vector<COutput>& vCoins, unsigned int nSp
 
     {
         LOCK2(cs_main, cs_wallet);
-        for (map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
+
+        for (auto it = mapWallet.begin(); it != mapWallet.end(); ++it)
         {
-            const CWalletTx* pcoin = &(*it).second;
+             CWalletTx* pcoin = const_cast<CWalletTx*>(&it->second);
 
             // Filtering by tx timestamp instead of block timestamp may give false positives but never false negatives
             if (pcoin->nTime + nStakeMinAge > nSpendTime)
@@ -1131,8 +1148,10 @@ void CWallet::AvailableCoinsForStaking(vector<COutput>& vCoins, unsigned int nSp
                 continue;
 
             for (unsigned int i = 0; i < pcoin->vout.size(); i++)
+            {
                 if (!(pcoin->IsSpent(i)) && IsMine(pcoin->vout[i]) && pcoin->vout[i].nValue >= nMinimumInputValue)
                     vCoins.push_back(COutput(pcoin, i, nDepth));
+            }
         }
     }
 }
@@ -1377,7 +1396,7 @@ bool CWallet::SelectCoinsForStaking(int64_t nTargetValue, unsigned int nSpendTim
     return true;
 }
 
-bool CWallet::CreateTransaction(const vector<pair<CScript, int64_t> >& vecSend, CWalletTx& wtxNew, CReserveKey& reservekey, int64_t& nFeeRet, const CCoinControl* coinControl)
+bool CWallet::CreateTransaction(const vector<pair<CScript, int64_t> >& vecSend, CWalletTx& wtxNew, CReserveKey& reservekey, int64_t& nFeeRet, const CCoinControl* coinControl, uint32_t nLockTime)
 {
     int64_t nValue = 0;
     BOOST_FOREACH (const PAIRTYPE(CScript, int64_t)& s, vecSend)
@@ -1469,8 +1488,13 @@ bool CWallet::CreateTransaction(const vector<pair<CScript, int64_t> >& vecSend, 
 
                 // Fill vin
                 BOOST_FOREACH(const PAIRTYPE(const CWalletTx*,unsigned int)& coin, setCoins)
-                    wtxNew.vin.push_back(CTxIn(coin.first->GetHash(),coin.second));
+                {
+                    wtxNew.vin.push_back(CTxIn(coin.first->GetHash(), coin.second));
+                }
 
+                // Set the locktime before adding supporting transactions and signing
+                wtxNew.nLockTime = nLockTime;
+                
                 // Sign
                 int nIn = 0;
                 BOOST_FOREACH(const PAIRTYPE(const CWalletTx*,unsigned int)& coin, setCoins)
@@ -1504,11 +1528,11 @@ bool CWallet::CreateTransaction(const vector<pair<CScript, int64_t> >& vecSend, 
     return true;
 }
 
-bool CWallet::CreateTransaction(CScript scriptPubKey, int64_t nValue, CWalletTx& wtxNew, CReserveKey& reservekey, int64_t& nFeeRet, const CCoinControl* coinControl)
+bool CWallet::CreateTransaction(CScript scriptPubKey, int64_t nValue, CWalletTx& wtxNew, CReserveKey& reservekey, int64_t& nFeeRet, const CCoinControl* coinControl, uint32_t nLockTime)
 {
     vector< pair<CScript, int64_t> > vecSend;
     vecSend.push_back(make_pair(scriptPubKey, nValue));
-    return CreateTransaction(vecSend, wtxNew, reservekey, nFeeRet, coinControl);
+    return CreateTransaction(vecSend, wtxNew, reservekey, nFeeRet, coinControl, nLockTime);
 }
 
 // NovaCoin: get current stake weight
@@ -2307,7 +2331,7 @@ void CWallet::FixSpentCoins(int& nMismatchFound, int64_t& nBalanceInQuestion, bo
         {
             if (IsMine(pcoin->vout[n]) && pcoin->IsSpent(n) && (txindex.vSpent.size() <= n || txindex.vSpent[n].IsNull()))
             {
-                printf("FixSpentCoins found lost coin %s BC %s[%d], %s\n",
+                printf("FixSpentCoins found lost coin %s CHESS %s[%d], %s\n",
                     FormatMoney(pcoin->vout[n].nValue).c_str(), pcoin->GetHash().ToString().c_str(), n, fCheckOnly? "repair not attempted" : "repairing");
                 nMismatchFound++;
                 nBalanceInQuestion += pcoin->vout[n].nValue;
@@ -2319,7 +2343,7 @@ void CWallet::FixSpentCoins(int& nMismatchFound, int64_t& nBalanceInQuestion, bo
             }
             else if (IsMine(pcoin->vout[n]) && !pcoin->IsSpent(n) && (txindex.vSpent.size() > n && !txindex.vSpent[n].IsNull()))
             {
-                printf("FixSpentCoins found spent coin %s BC %s[%d], %s\n",
+                printf("FixSpentCoins found spent coin %s CHESS %s[%d], %s\n",
                     FormatMoney(pcoin->vout[n].nValue).c_str(), pcoin->GetHash().ToString().c_str(), n, fCheckOnly? "repair not attempted" : "repairing");
                 nMismatchFound++;
                 nBalanceInQuestion += pcoin->vout[n].nValue;
@@ -2473,4 +2497,72 @@ void CWallet::GetKeyBirthTimes(std::map<CKeyID, int64_t> &mapKeyBirth) const {
     // Extract block timestamps for those keys
     for (std::map<CKeyID, CBlockIndex*>::const_iterator it = mapKeyFirstBlock.begin(); it != mapKeyFirstBlock.end(); it++)
         mapKeyBirth[it->first] = it->second->nTime - 7200; // block times can be 2h off
+}
+
+CWalletTx* CWallet::GetWalletTx(const uint256& txid) const
+{
+    // Check if the txid exists in the wallet's mapWallet
+    std::map<uint256, CWalletTx>::const_iterator it = mapWallet.find(txid);
+
+    if (it != mapWallet.end()) {
+        // Return a pointer to the transaction if found
+        return const_cast<CWalletTx*>(&it->second);
+    }
+
+    // Return null if the transaction is not found
+    return nullptr;
+}
+
+//static std::vector<unsigned char> ToByteVector(CKeyID& keyID)
+//{
+//    // Simply copy the data from uint160 (CKeyID) into a std::vector
+//    return std::vector<unsigned char>(keyID.begin(), keyID.end());
+//}
+
+void CWallet::CheckPendingTransactions(const std::set<COutPoint>& newInputs)
+{
+    LOCK(cs_wallet);
+
+    for (const auto& tx : mapWallet) {
+        const CWalletTx& wtx = tx.second;
+
+        // Skip confirmed transactions
+        if (wtx.IsTrusted()) continue;
+
+        // Check for overlapping UTXOs
+        for (const auto& txin : wtx.vin) {
+            if (newInputs.count(txin.prevout)) {
+                throw std::runtime_error("Transaction conflict: UTXO already used in a pending transaction");
+            }
+        }
+    }
+}
+
+CTxDestination CWallet::DecodeDestination(const std::string& str)
+{
+    CBitcoinAddress address(str);
+    if (address.IsValid()) {
+        return address.Get();
+    }
+    return CNoDestination();
+}
+
+// Function to check if a specific output has been spent
+bool CWallet::IsSpent(const uint256& txid, unsigned int nOut) const
+{
+    // Iterate through all wallet transactions
+    for (const auto& walletEntry : mapWallet) {
+        const CWalletTx& wtx = walletEntry.second;
+
+        // Iterate through all inputs in the transaction
+        for (const CTxIn& txin : wtx.vin) {
+            // If the input's previous outpoint matches the one we're checking, it's spent
+            if (txin.prevout.hash == txid && txin.prevout.n == nOut) {
+                return true; // The output has been spent
+            }
+        }
+    }
+
+    // If we don't find a match, the output is not spent
+    return false;
 }

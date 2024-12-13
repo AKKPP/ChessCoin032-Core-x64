@@ -28,6 +28,10 @@
 #include "wallet.h"
 #include "chatwidget.h"
 #include "burncoinsdialog.h"
+#include "blockbrowser.h"
+#ifdef SENDTIMLOCK
+#include "sendtimelockdialog.h"
+#endif
 
 #ifdef Q_OS_MAC
 #include "macdockiconhandler.h"
@@ -148,6 +152,8 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     chatPage = new QChatWidget(this);
 
     burnCoinsPage = new BurnCoinsDialog(this);
+
+    blockBrowser = new BlockBrowser(this);
 
     centralWidget = new QStackedWidget(this);
     centralWidget->addWidget(overviewPage);
@@ -312,7 +318,9 @@ void BitcoinGUI::createActions()
     connect(historyAction, SIGNAL(triggered()), this, SLOT(gotoHistoryPage()));
     connect(addressBookAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(addressBookAction, SIGNAL(triggered()), this, SLOT(gotoAddressBookPage()));
+    connect(chatAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(chatAction, SIGNAL(triggered()), this, SLOT(gotoChatRoomPage()));
+    connect(burnCoinsAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(burnCoinsAction, SIGNAL(triggered()), this, SLOT(gotoBurnCoinsPage()));
 
     quitAction = new QAction(QIcon(":/icons/quit"), tr("E&xit"), this);
@@ -386,6 +394,16 @@ void BitcoinGUI::createActions()
     chessResetAction->setToolTip(tr("Reset engine configuration"));
     chessResetAction->setIconVisibleInMenu(true);
 
+    explorerAction = new QAction(QIcon(":/icons/find"), tr("Block &Explorer"), this);
+    explorerAction->setToolTip(tr("Explore the blockchain and transactions"));
+    explorerAction->setIconVisibleInMenu(true);
+    
+#ifdef SENDTIMLOCK
+    sendTimelockAction = new QAction(QIcon(":/icons/send"), tr("&Send coins with timelock..."), this);
+    sendTimelockAction->setToolTip(tr("Send coins by timelock with block height or timestamp"));
+    sendTimelockAction->setIconVisibleInMenu(true);
+#endif
+
     connect(quitAction, SIGNAL(triggered()), qApp, SLOT(quit()));
     connect(aboutAction, SIGNAL(triggered()), this, SLOT(aboutClicked()));
     connect(aboutQtAction, SIGNAL(triggered()), qApp, SLOT(aboutQt()));
@@ -400,6 +418,10 @@ void BitcoinGUI::createActions()
     connect(verifyMessageAction, SIGNAL(triggered()), this, SLOT(gotoVerifyMessageTab()));
     connect(chessPlayAction, SIGNAL(triggered()), this, SLOT(onPlayChess()));
     connect(chessResetAction, SIGNAL(triggered()), this, SLOT(onResetChessEngineJson()));
+    connect(explorerAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));     connect(explorerAction, SIGNAL(triggered()), this, SLOT(gotoBlockBrowser()));
+#ifdef SENDTIMLOCK
+    connect(sendTimelockAction, SIGNAL(triggered()), this, SLOT(showSendTimelockDialog()));
+#endif
 }
 
 void BitcoinGUI::createMenuBar()
@@ -429,12 +451,17 @@ void BitcoinGUI::createMenuBar()
     settings->addAction(optionsAction);
 
     QMenu *tools = appMenuBar->addMenu(tr("&Tools"));
+#ifdef SENDTIMLOCK
+    tools->addAction(sendTimelockAction);
+#endif
     tools->addAction(burnCoinsAction);
     tools->addSeparator();
     tools->addAction(signMessageAction);
     tools->addAction(verifyMessageAction);
     tools->addSeparator();
     tools->addAction(chatAction);
+    tools->addSeparator();
+    tools->addAction(explorerAction);
 
     QMenu *help = appMenuBar->addMenu(tr("&Help"));
     help->addAction(openRPCConsoleAction);
@@ -536,6 +563,7 @@ void BitcoinGUI::setClientModel(ClientModel *clientModel)
         rpcConsole->setClientModel(clientModel);
         addressBookPage->setOptionsModel(clientModel->getOptionsModel());
         receiveCoinsPage->setOptionsModel(clientModel->getOptionsModel());
+        blockBrowser->setClientModel(clientModel);
     }
 }
 
@@ -556,6 +584,8 @@ void BitcoinGUI::setWalletModel(WalletModel *walletModel)
         sendCoinsPage->setModel(walletModel);
         signVerifyMessageDialog->setModel(walletModel);
         burnCoinsPage->setModel(walletModel);
+        blockBrowser->setWalletModel(walletModel);
+
 
         setEncryptionStatus(walletModel->getEncryptionStatus());
         connect(walletModel, SIGNAL(encryptionStatusChanged(int)), this, SLOT(setEncryptionStatus(int)));
@@ -1270,3 +1300,18 @@ void BitcoinGUI::gotoBurnCoinsPage()
     burnCoinsPage->show();
     burnCoinsPage->setFocus();
 }
+
+void BitcoinGUI::gotoBlockBrowser()
+{
+    blockBrowser->show();
+    blockBrowser->setFocus();
+}
+
+#ifdef SENDTIMLOCK
+void BitcoinGUI::showSendTimelockDialog()
+{
+    sendtimelockdialog dlg(nullptr);
+    dlg.setModels(walletModel, clientModel);
+    dlg.exec();
+}
+#endif
