@@ -483,8 +483,8 @@ DEPENDPATH += $$BOOST_LIB_PATH
 LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(BDB_LIB_PATH,,-L,) $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,) $$join(QRDECODE_LIB_PATH,,-L,)
 LIBS +=  -lssl -lcrypto -ldb_cxx
 
-LIBS += $$join(CURL_LIB_PATH,,-L,)
-LIBS += -lcurl
+#LIBS += $$join(CURL_LIB_PATH,,-L,)
+#LIBS += -lcurl
 
 # -lgdi32 has to happen after -lcrypto (see  #681)
 windows:LIBS += -lws2_32 -lshlwapi -lmswsock -lole32 -loleaut32 -luuid -lgdi32

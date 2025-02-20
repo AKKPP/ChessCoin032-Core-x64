@@ -2,7 +2,7 @@ TEMPLATE = app
 TARGET = chesscoin-qt
 VERSION = 1.5.1
 INCLUDEPATH += src src/json src/qt
-DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE __STDC_FORMAT_MACROS __STDC_LIMIT_MACROS QT_SUPPORTSSL
+DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE QT_SUPPORTSSL WAYLANDMODE
 CONFIG += no_include_pwd
 CONFIG += thread
 CONFIG += static
@@ -15,7 +15,6 @@ greaterThan(QT_MAJOR_VERSION, 4) {
     DEFINES += QT_DEPRECATED_WARNINGS
 }
 
-DEFINES += RASPBERRY
 
 # for boost 1.37, add -mt to the boost libraries
 # use: qmake BOOST_LIB_SUFFIX=-mt
@@ -31,6 +30,7 @@ OBJECTS_DIR = build
 MOC_DIR = build
 UI_DIR = build
 
+
 BOOST_LIB_SUFFIX=
 BOOST_INCLUDE_PATH=/usr/local/boost.1.77.0/include
 BOOST_LIB_PATH=/usr/local/boost.1.77.0/lib
@@ -38,16 +38,14 @@ BOOST_LIB_PATH=/usr/local/boost.1.77.0/lib
 BDB_INCLUDE_PATH=/usr/local/berkeleydb.6.0.20/include
 BDB_LIB_PATH=/usr/local/berkeleydb.6.0.20/lib
 
-OPENSSL_INCLUDE_PATH=/usr/local/ssl.1.1.1/include
-OPENSSL_LIB_PATH=/usr/local/ssl.1.1.1/lib
+OPENSSL_INCLUDE_PATH=/usr/local/ssl.3.4.0/include
+OPENSSL_LIB_PATH=/usr/local/ssl.3.4.0/lib64
 
-QRENCODE_INCLUDE_PATH=/usr/local/qrencode.4.1.1/include
-QRENCODE_LIB_PATH=/usr/local/qrencode.4.1.1/lib
+QRENCODE_INCLUDE_PATH=/usr/local/include
+QRENCODE_LIB_PATH=/usr/local/lib
 
 QRDECODE_INCLUDE_PATH=/usr/local/qzxing
 QRDECODE_LIB_PATH=/usr/local/qzxing/lib
-
-SSP_LIB_PATH=/home/pi/Qt5.15.8/tools/native-pi-gcc-10.3.0-64/lib64/
 
 CURL_INCLUDE_PATH=/usr/local/curl-8.11.0/include
 CURL_LIB_PATH=/usr/local/curl-8.11.0/lib/
@@ -72,11 +70,10 @@ contains(DEBUG, 1) {
     QMAKE_CXXCFLAGS += -g -O0
 }
 
-
 !win32 {
 # for extra security against potential buffer overflows: enable GCCs Stack Smashing Protection
 QMAKE_CXXFLAGS *= -fstack-protector-all --param ssp-buffer-size=1
-QMAKE_LFLAGS *= -fstack-protector-all --param ssp-buffer-size=1
+QMAKE_LFLAGS *= -fstack-protector-all --param ssp-buffer-size=1  -no-pie
 # We need to exclude this for Windows cross compile with MinGW 4.2.x, as it will result in a non-working executable!
 # This can be enabled for Windows, when we switch to MinGW >= 4.4.x.
 }
@@ -114,12 +111,10 @@ contains(BITCOIN_NEED_QT_PLUGINS, 1) {
     QTPLUGIN += qcncodecs qjpcodecs qtwcodecs qkrcodecs qtaccessiblewidgets
 }
 
-#QTPLUGIN += qeglfs qlinuxfb qminimal qminimalegl qoffscreen qvnc qwebgl
-
 contains(USE_UPNP, 1) {
     message(Building with miniupnpc support)
-    INCLUDEPATHS += -I"/usr/local/include/miniupnpc"
-    MINIUPNPC_LIB_PATH=/usr/local/lib/aarch64-linux-gnu
+    INCLUDEPATHS += -I"/usr/include/miniupnpc"
+    MINIUPNPC_LIB_PATH=/usr/lib
     LIBS += $$join(MINIUPNPC_LIB_PATH,,-L,) -lminiupnpc
     win32:LIBS += -liphlpapi
     DEFS += -DSTATICLIB -DUSE_UPNP=$(USE_UPNP)
@@ -143,13 +138,14 @@ contains(USE_IPV6, -) {
     DEFINES += USE_IPV6=$$USE_IPV6
 }
 
-INCLUDEPATH += src/leveldb-rpi/include src/leveldb-rpi/helpers
-LIBS += $$PWD/src/leveldb-rpi/libleveldb.a
+INCLUDEPATH += src/leveldb/include src/leveldb/helpers
+LIBS += $$PWD/src/leveldb/libleveldb.a $$PWD/src/leveldb/libmemenv.a
 SOURCES += src/txdb-leveldb.cpp
+
 
 !win32 {
     # we use QMAKE_CXXFLAGS_RELEASE even without RELEASE=1 because we use RELEASE to indicate linking preferences not -O preferences
-    genleveldb.commands = cd $$PWD/src/leveldb-rpi && CC=$$QMAKE_CC CXX=$$QMAKE_CXX $(MAKE) OPT=\"$$QMAKE_CXXFLAGS $$QMAKE_CXXFLAGS_RELEASE\" libleveldb.a
+    genleveldb.commands = cd $$PWD/src/leveldb && CC=$$QMAKE_CC CXX=$$QMAKE_CXX $(MAKE) OPT=\"$$QMAKE_CXXFLAGS $$QMAKE_CXXFLAGS_RELEASE\" libleveldb.a libmemenv.a
 } else {
     # make an educated guess about what the ranlib command is called
     isEmpty(QMAKE_RANLIB) {
@@ -159,23 +155,23 @@ SOURCES += src/txdb-leveldb.cpp
     genleveldb.commands = cd $$PWD/src/leveldb && CC=$$QMAKE_CC CXX=$$QMAKE_CXX TARGET_OS=OS_WINDOWS_CROSSCOMPILE $(MAKE) OPT=\"$$QMAKE_CXXFLAGS $$QMAKE_CXXFLAGS_RELEASE\" libleveldb.a libmemenv.a && $$QMAKE_RANLIB $$PWD/src/leveldb/libleveldb.a && $$QMAKE_RANLIB $$PWD/src/leveldb/libmemenv.a
 }
 
-genleveldb.target = $$PWD/src/leveldb-rpi/libleveldb.a
+genleveldb.target = $$PWD/src/leveldb/libleveldb.a
 genleveldb.depends = FORCE
 
-#PRE_TARGETDEPS += $$PWD/src/leveldb-rpi/libleveldb.a
+#PRE_TARGETDEPS += $$PWD/src/leveldb/libleveldb.a
 #QMAKE_EXTRA_TARGETS += genleveldb
 ##Gross ugly hack that depends on qmake internals, unfortunately there is no other way to do it.
-#QMAKE_CLEAN += $$PWD/src/leveldb-rpi/libleveldb.a; cd $$PWD/src/leveldb-rpi; $(MAKE) clean
+#QMAKE_CLEAN += $$PWD/src/leveldb/libleveldb.a; cd $$PWD/src/leveldb ; $(MAKE) clean
 
-# regenerate src/build.h
-!windows|contains(USE_BUILD_INFO, 1) {
-    genbuild.depends = FORCE
-    genbuild.commands = cd $$PWD; /bin/sh share/genbuild.sh $$OUT_PWD/build/build.h
-    genbuild.target = $$OUT_PWD/build/build.h
-    PRE_TARGETDEPS += $$OUT_PWD/build/build.h
-    QMAKE_EXTRA_TARGETS += genbuild
-    DEFINES += HAVE_BUILD_INFO
-}
+# # regenerate src/build.h
+# !windows|contains(USE_BUILD_INFO, 1) {
+#     genbuild.depends = FORCE
+#     genbuild.commands = cd $$PWD; /bin/sh share/genbuild.sh $$OUT_PWD/build/build.h
+#     genbuild.target = $$OUT_PWD/build/build.h
+#     PRE_TARGETDEPS += $$OUT_PWD/build/build.h
+#     QMAKE_EXTRA_TARGETS += genbuild
+#     DEFINES += HAVE_BUILD_INFO
+# }
 
 contains(USE_O3, 1) {
     message(Building O3 optimization flag)
@@ -467,11 +463,15 @@ windows:!contains(MINGW_THREAD_BUGFIX, 0) {
 }
 
 # Set libraries and includes at end, to use platform-defined defaults if not overridden
-INCLUDEPATH += $$BOOST_INCLUDE_PATH $$BDB_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$QRENCODE_INCLUDE_PATH $$QRDECODE_INCLUDE_PATH
+INCLUDEPATH += $$BOOST_INCLUDE_PATH $$BDB_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$QRENCODE_INCLUDE_PATH $$QRDECODE_INCLUDE_PATH $$CURL_INCLUDE_PATH
 DEPENDPATH += $$BOOST_LIB_PATH
 
-LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(BDB_LIB_PATH,,-L,) $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,) $$join(QRDECODE_LIB_PATH,,-L,)
+# LIBS += $$join(CURL_LIB_PATH,,-L,)
+# LIBS += -lcurl
+
+LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(BDB_LIB_PATH,,-L,) $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,)  $$join(QRDECODE_LIB_PATH,,-L,)
 LIBS += -lssl -lcrypto -ldb_cxx -lz
+
 # -lgdi32 has to happen after -lcrypto (see  #681)
 windows:LIBS += -lws2_32 -lshlwapi -lmswsock -lole32 -loleaut32 -luuid -lgdi32
 LIBS += -lboost_system -lboost_filesystem -lboost_program_options -lboost_thread -lboost_chrono
@@ -488,8 +488,5 @@ contains(RELEASE, 1) {
     DEFINES += LINUX
     LIBS += -lrt -ldl
 }
-
-target.path = /home/pi
-INSTALLS += target
 
 system($$QMAKE_LRELEASE -silent $$_PRO_FILE_)

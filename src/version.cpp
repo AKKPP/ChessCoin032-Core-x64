@@ -11,7 +11,11 @@
 const std::string CLIENT_NAME("Satoshi");
 
 // Client version number
+#ifdef WAYLANDMODE
+#define CLIENT_VERSION_SUFFIX   " (wayland)"
+#else
 #define CLIENT_VERSION_SUFFIX   ""
+#endif
 
 // Compiler name
 #ifdef __INTEL_COMPILER

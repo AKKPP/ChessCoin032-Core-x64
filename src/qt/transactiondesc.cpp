@@ -10,9 +10,7 @@
 #include "base58.h"
 
 QString TransactionDesc::FormatTxStatus(const CWalletTx& wtx)
-{
-    AssertLockHeld(cs_main);
-    
+{  
     if (!IsFinalTx(wtx, nBestHeight + 1))
     {
         if (wtx.nLockTime < LOCKTIME_THRESHOLD)

@@ -63,11 +63,7 @@ private:
 
     int numBlocksAtStartup;
 
-#ifdef TIMERMODE
-    QTimer *pollTimer;
-#else
     QThread* const pollThread;
-#endif
 
     void subscribeToCoreSignals();
     void unsubscribeFromCoreSignals();
@@ -81,9 +77,6 @@ signals:
     void error(const QString &title, const QString &message, bool modal);
 
 public slots:
-#ifdef TIMERMODE
-    void updateTimer();
-#endif
     void updateNumConnections(int numConnections);
     void updateAlert(const QString &hash, int status);
     void updateBlocksNumber(int bestHeight, int totalBlock);
