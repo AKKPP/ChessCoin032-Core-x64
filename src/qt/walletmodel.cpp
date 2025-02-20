@@ -94,13 +94,12 @@ void WalletModel::pollBalanceChanged()
         return;
     TRY_LOCK(wallet->cs_wallet, lockWallet);
     if(!lockWallet)
-        return;    
+        return;
 
     if(nBestHeight != cachedNumBlocks)
     {
         // Balance and number of transactions might have changed
         cachedNumBlocks = nBestHeight;
-
         checkBalanceChanged();
         if(transactionTableModel)
             transactionTableModel->updateConfirmations();

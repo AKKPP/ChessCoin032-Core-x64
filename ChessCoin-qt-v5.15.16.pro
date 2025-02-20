@@ -2,10 +2,14 @@ TEMPLATE = app
 TARGET = chesscoin-qt
 VERSION = 1.5.1
 INCLUDEPATH += src src/json src/qt
-DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE __STDC_FORMAT_MACROS __STDC_LIMIT_MACROS QT_SUPPORTSSL
+DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE QT_SUPPORTSSL __STDC_FORMAT_MACROS __STDC_LIMIT_MACROS
 CONFIG += no_include_pwd
 CONFIG += thread
 CONFIG += static
+CONFIG += staticlib
+CONFIG += release
+CONFIG -= embed_manifest_exe multimedia-wmf
+CONFIG -= shared  # Ensure no shared libs
 
 QT += core gui network multimedia multimediawidgets
 
@@ -15,7 +19,14 @@ greaterThan(QT_MAJOR_VERSION, 4) {
     DEFINES += QT_DEPRECATED_WARNINGS
 }
 
-DEFINES += RASPBERRY
+# Optimization level change (e.g., avoid aggressive optimizations)
+QMAKE_CXXFLAGS_RELEASE -= -O2
+QMAKE_CXXFLAGS_RELEASE += -O1
+
+# Ensure no potentially unsafe optimization flags are used
+QMAKE_CXXFLAGS += -fno-omit-frame-pointer
+
+QMAKE_CXXFLAGS += -std=c++14
 
 # for boost 1.37, add -mt to the boost libraries
 # use: qmake BOOST_LIB_SUFFIX=-mt
@@ -31,26 +42,24 @@ OBJECTS_DIR = build
 MOC_DIR = build
 UI_DIR = build
 
-BOOST_LIB_SUFFIX=
-BOOST_INCLUDE_PATH=/usr/local/boost.1.77.0/include
-BOOST_LIB_PATH=/usr/local/boost.1.77.0/lib
+BOOST_LIB_SUFFIX=-mgw7-mt-s-x64-1_77
+BOOST_INCLUDE_PATH=D:/ChessCoinLibs64/boost_1_77_0
+BOOST_LIB_PATH=D:/ChesscoinLibs64/boost_1_77_0/stage/lib
 
-BDB_INCLUDE_PATH=/usr/local/berkeleydb.6.0.20/include
-BDB_LIB_PATH=/usr/local/berkeleydb.6.0.20/lib
+BDB_INCLUDE_PATH=D:/ChessCoinLibs64/db-6.0.20/build_windows
+BDB_LIB_PATH=D:/ChessCoinLibs64/db-6.0.20/build_windows
 
-OPENSSL_INCLUDE_PATH=/usr/local/ssl.1.1.1/include
-OPENSSL_LIB_PATH=/usr/local/ssl.1.1.1/lib
+OPENSSL_INCLUDE_PATH=D:/ChesscoinLibs64/openssl-3.4.0-static/include
+OPENSSL_LIB_PATH=D:/ChesscoinLibs64/openssl-3.4.0-static
 
-QRENCODE_INCLUDE_PATH=/usr/local/qrencode.4.1.1/include
-QRENCODE_LIB_PATH=/usr/local/qrencode.4.1.1/lib
+QRENCODE_INCLUDE_PATH=D:/ChessCoinLibs64/qrencode-4.1.1-static
+QRENCODE_LIB_PATH=D:/ChessCoinLibs64/qrencode-4.1.1-static/.libs
 
-QRDECODE_INCLUDE_PATH=/usr/local/qzxing
-QRDECODE_LIB_PATH=/usr/local/qzxing/lib
+QRDECODE_INCLUDE_PATH=D:/ChessCoinLibs64/qzxing
+QRDECODE_LIB_PATH=D:/ChessCoinLibs64/qzxing/staticlib
 
-SSP_LIB_PATH=/home/pi/Qt5.15.8/tools/native-pi-gcc-10.3.0-64/lib64/
-
-CURL_INCLUDE_PATH=/usr/local/curl-8.11.0/include
-CURL_LIB_PATH=/usr/local/curl-8.11.0/lib/
+CURL_INCLUDE_PATH=D:/ChessCoinLibs64/curl-8.11.0/include
+CURL_LIB_PATH=D:/ChesscoinLibs64/curl-8.11.0/lib/.libs
 
 # use: qmake "RELEASE=1"
 contains(RELEASE, 1) {
@@ -72,7 +81,6 @@ contains(DEBUG, 1) {
     QMAKE_CXXCFLAGS += -g -O0
 }
 
-
 !win32 {
 # for extra security against potential buffer overflows: enable GCCs Stack Smashing Protection
 QMAKE_CXXFLAGS *= -fstack-protector-all --param ssp-buffer-size=1
@@ -81,17 +89,21 @@ QMAKE_LFLAGS *= -fstack-protector-all --param ssp-buffer-size=1
 # This can be enabled for Windows, when we switch to MinGW >= 4.4.x.
 }
 # for extra security on Windows: enable ASLR and DEP via GCC linker flags
+
+
 win32:QMAKE_LFLAGS *= -Wl,--dynamicbase -Wl,--nxcompat
 
 # for debugging at release mode
 #QMAKE_CXXFLAGS +=-g
-win32:QMAKE_LFLAGS_RELEASE -= -Wl,-s
+#QMAKE_LFLAGS_RELEASE -= -Wl,-s
 #QMAKE_CXXFLAGS_RELEASE += $$QMAKE_CFLAGS_RELEASE_WITH_DEBUGINFO
 #QMAKE_LFLAGS_RELEASE += $$QMAKE_LFLAGS_RELEASE_WITH_DEBUGINFO
 
-## Windows Debug help Bug
-#win32:QMAKE_LFLAGS += -static-libgcc -static-libstdc++
+QMAKE_LFLAGS += -static -static-libgcc -static-libstdc++
+LIBS += -static -static-libgcc -static-libstdc++
 
+# Prevent linking against dynamic runtime
+QMAKE_CXXFLAGS += -D_STATIC
 
 # use: qmake "USE_QRCODE=1"
 # libqrencode (http://fukuchi.org/works/qrencode/index.en.html) must be installed for support
@@ -114,12 +126,16 @@ contains(BITCOIN_NEED_QT_PLUGINS, 1) {
     QTPLUGIN += qcncodecs qjpcodecs qtwcodecs qkrcodecs qtaccessiblewidgets
 }
 
-#QTPLUGIN += qeglfs qlinuxfb qminimal qminimalegl qoffscreen qvnc qwebgl
+contains(USE_RASPBERRY, 1) {
+    message(Building with Raspberry support)
+    DEFINES += RASPBERRY
+    QTPLUGIN += qeglfs qlinuxfb qminimal qminimalegl qoffscreen qvnc qwebgl qxcb
+}
 
 contains(USE_UPNP, 1) {
     message(Building with miniupnpc support)
-    INCLUDEPATHS += -I"/usr/local/include/miniupnpc"
-    MINIUPNPC_LIB_PATH=/usr/local/lib/aarch64-linux-gnu
+    INCLUDEPATHS += -I"D:/ChessCoinLibs64/miniupnpc-2.2.3"
+    MINIUPNPC_LIB_PATH=D:/ChessCoinLibs64/miniupnpc-2.2.3
     LIBS += $$join(MINIUPNPC_LIB_PATH,,-L,) -lminiupnpc
     win32:LIBS += -liphlpapi
     DEFS += -DSTATICLIB -DUSE_UPNP=$(USE_UPNP)
@@ -143,14 +159,14 @@ contains(USE_IPV6, -) {
     DEFINES += USE_IPV6=$$USE_IPV6
 }
 
-INCLUDEPATH += src/leveldb-rpi/include src/leveldb-rpi/helpers
-LIBS += $$PWD/src/leveldb-rpi/libleveldb.a
+INCLUDEPATH += src/leveldb/include src/leveldb/helpers
+LIBS += $$PWD/src/leveldb/libleveldb.a $$PWD/src/leveldb/libmemenv.a
 SOURCES += src/txdb-leveldb.cpp
 
 !win32 {
     # we use QMAKE_CXXFLAGS_RELEASE even without RELEASE=1 because we use RELEASE to indicate linking preferences not -O preferences
-    genleveldb.commands = cd $$PWD/src/leveldb-rpi && CC=$$QMAKE_CC CXX=$$QMAKE_CXX $(MAKE) OPT=\"$$QMAKE_CXXFLAGS $$QMAKE_CXXFLAGS_RELEASE\" libleveldb.a
-} else {
+    genleveldb.commands = cd $$PWD/src/leveldb && CC=$$QMAKE_CC CXX=$$QMAKE_CXX $(MAKE) OPT=\"$$QMAKE_CXXFLAGS $$QMAKE_CXXFLAGS_RELEASE\" libleveldb.a libmemenv.a
+	} else {
     # make an educated guess about what the ranlib command is called
     isEmpty(QMAKE_RANLIB) {
         QMAKE_RANLIB = $$replace(QMAKE_STRIP, strip, ranlib)
@@ -159,13 +175,13 @@ SOURCES += src/txdb-leveldb.cpp
     genleveldb.commands = cd $$PWD/src/leveldb && CC=$$QMAKE_CC CXX=$$QMAKE_CXX TARGET_OS=OS_WINDOWS_CROSSCOMPILE $(MAKE) OPT=\"$$QMAKE_CXXFLAGS $$QMAKE_CXXFLAGS_RELEASE\" libleveldb.a libmemenv.a && $$QMAKE_RANLIB $$PWD/src/leveldb/libleveldb.a && $$QMAKE_RANLIB $$PWD/src/leveldb/libmemenv.a
 }
 
-genleveldb.target = $$PWD/src/leveldb-rpi/libleveldb.a
+genleveldb.target = $$PWD/src/leveldb/libleveldb.a
 genleveldb.depends = FORCE
 
-#PRE_TARGETDEPS += $$PWD/src/leveldb-rpi/libleveldb.a
+#PRE_TARGETDEPS += $$PWD/src/leveldb/libleveldb.a
 #QMAKE_EXTRA_TARGETS += genleveldb
 ##Gross ugly hack that depends on qmake internals, unfortunately there is no other way to do it.
-#QMAKE_CLEAN += $$PWD/src/leveldb-rpi/libleveldb.a; cd $$PWD/src/leveldb-rpi; $(MAKE) clean
+#QMAKE_CLEAN += $$PWD/src/leveldb/libleveldb.a; cd $$PWD/src/leveldb ; $(MAKE) clean
 
 # regenerate src/build.h
 !windows|contains(USE_BUILD_INFO, 1) {
@@ -192,7 +208,8 @@ contains(USE_O3, 1) {
     QMAKE_CFLAGS += -msse2
 }
 
-QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-unused-parameter -Wstack-protector
+QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wpedantic -Wextra -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-unused-parameter -Wstack-protector -fexceptions
+
 
 # Input
 DEPENDPATH += src src/json src/qt
@@ -445,6 +462,7 @@ TSQM.output = $$QM_DIR/${QMAKE_FILE_BASE}.qm
 TSQM.commands = $$QMAKE_LRELEASE ${QMAKE_FILE_IN} -qm ${QMAKE_FILE_OUT}
 TSQM.CONFIG = no_link
 QMAKE_EXTRA_COMPILERS += TSQM
+PRE_TARGETDEPS += compiler_TSQM_make_all
 
 # "Other files" to show in Qt Creator
 OTHER_FILES += \
@@ -467,15 +485,22 @@ windows:!contains(MINGW_THREAD_BUGFIX, 0) {
 }
 
 # Set libraries and includes at end, to use platform-defined defaults if not overridden
-INCLUDEPATH += $$BOOST_INCLUDE_PATH $$BDB_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$QRENCODE_INCLUDE_PATH $$QRDECODE_INCLUDE_PATH
+INCLUDEPATH += $$BOOST_INCLUDE_PATH $$BDB_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$QRENCODE_INCLUDE_PATH $$QRDECODE_INCLUDE_PATH $$CURL_INCLUDE_PATH
 DEPENDPATH += $$BOOST_LIB_PATH
 
 LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(BDB_LIB_PATH,,-L,) $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,) $$join(QRDECODE_LIB_PATH,,-L,)
-LIBS += -lssl -lcrypto -ldb_cxx -lz
+LIBS +=  -lssl -lcrypto -ldb_cxx
+
+#LIBS += $$join(CURL_LIB_PATH,,-L,)
+#LIBS += -lcurl
+
 # -lgdi32 has to happen after -lcrypto (see  #681)
 windows:LIBS += -lws2_32 -lshlwapi -lmswsock -lole32 -loleaut32 -luuid -lgdi32
-LIBS += -lboost_system -lboost_filesystem -lboost_program_options -lboost_thread -lboost_chrono
-LIBS += -lQZXing
+
+LIBS += -lboost_system$$BOOST_LIB_SUFFIX -lboost_filesystem$$BOOST_LIB_SUFFIX  -lboost_program_options$$BOOST_LIB_SUFFIX -lboost_thread$$BOOST_LIB_SUFFIX libboost_chrono$$BOOST_LIB_SUFFIX
+LIBS += -Wl,-Bstatic -lpthread -Wl,-Bdynamic
+
+LIBS += -lQZXing -liconv
 
 contains(RELEASE, 1) {
     !windows:!macx {
@@ -488,8 +513,5 @@ contains(RELEASE, 1) {
     DEFINES += LINUX
     LIBS += -lrt -ldl
 }
-
-target.path = /home/pi
-INSTALLS += target
 
 system($$QMAKE_LRELEASE -silent $$_PRO_FILE_)

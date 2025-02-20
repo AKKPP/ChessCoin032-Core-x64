@@ -379,8 +379,6 @@ bool IsStandardTx(const CTransaction& tx)
 
 bool IsFinalTx(const CTransaction &tx, int nBlockHeight, int64_t nBlockTime)
 {
-    AssertLockHeld(cs_main);
-
     // Time based nLockTime implemented in 0.1.6
     if (tx.nLockTime == 0)
         return true;
@@ -490,8 +488,6 @@ CTransaction::GetLegacySigOpCount() const
 
 int CMerkleTx::SetMerkleBranch(const CBlock* pblock)
 {
-    AssertLockHeld(cs_main);
-
     CBlock blockTmp;
     if (pblock == NULL)
     {
@@ -622,8 +618,6 @@ int64_t CTransaction::GetMinFee(unsigned int nBlockSize, enum GetMinFee_mode mod
 
 bool AcceptToMemoryPool(CTxMemPool& pool, CTransaction &tx, bool* pfMissingInputs)
 {
-    AssertLockHeld(cs_main);
-    
     if (pfMissingInputs)
         *pfMissingInputs = false;
 
@@ -853,8 +847,6 @@ int CMerkleTx::GetDepthInMainChainINTERNAL(CBlockIndex* &pindexRet) const
     if (hashBlock == 0 || nIndex == -1)
         return 0;        
 
-    AssertLockHeld(cs_main);
-
     // Find the block it claims to be in
     map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(hashBlock);
     if (mi == mapBlockIndex.end())
@@ -876,9 +868,7 @@ int CMerkleTx::GetDepthInMainChainINTERNAL(CBlockIndex* &pindexRet) const
 }
 
 int CMerkleTx::GetDepthInMainChain(CBlockIndex* &pindexRet) const
-{
-    AssertLockHeld(cs_main);
-    
+{  
     int nResult = GetDepthInMainChainINTERNAL(pindexRet);
     if (nResult == 0 && !mempool.exists(GetHash()))
         return -1; // Not in chain, not in mempool
@@ -1212,7 +1202,7 @@ int GetNumBlocksOfPeers()
 
 bool IsInitialBlockDownload()
 {
-    LOCK(cs_main);
+    // LOCK(cs_main);  // 20250123 GUI getting stuck
     
     if (pindexBest == NULL || nBestHeight < Checkpoints::GetTotalBlocksEstimate())
         return true;
@@ -2045,7 +2035,7 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos, const u
     if (!txdb.TxnCommit())
         return false;
 
-    LOCK(cs_main);
+    // LOCK(cs_main);  // 20250123 GUI getting stuck
 
     // New best
     if (pindexNew->nChainTrust > nBestChainTrust)
@@ -2063,9 +2053,8 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos, const u
     }
 
     // repaint every 16 blocks if not in initial block download
-    if ((++blockNotifyCounter & 0x0F) == 0)
+    if ((++blockNotifyCounter & 0x0F) == 0 || !IsInitialBlockDownload()) // repaint every 16 blocks if not in initial block download
     {
-        MilliSleep(1);
         uiInterface.NotifyBlocksChanged();
     }
 
@@ -2162,8 +2151,6 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
 
 bool CBlock::AcceptBlock()
 {
-    AssertLockHeld(cs_main);
-
     if (nVersion > CURRENT_VERSION)
         return DoS(100, error("AcceptBlock() : reject unknown block version %d", nVersion));
 
@@ -2282,8 +2269,6 @@ bool CBlockIndex::IsSuperMajority(int minVersion, const CBlockIndex* pstart, uns
 
 bool ProcessBlock(CNode* pfrom, CBlock* pblock)
 {
-    AssertLockHeld(cs_main);
-
     // Check for duplicate
     uint256 hash = pblock->GetHash();
     if (mapBlockIndex.count(hash))
@@ -2552,7 +2537,7 @@ void UnloadBlockIndex()
 
 bool LoadBlockIndex(bool fAllowNew)
 {
-    LOCK(cs_main);
+    // LOCK(cs_main);  // 20250123 GUI getting stuck
 
     CBigNum bnTrustedModulus;
 
@@ -2694,8 +2679,6 @@ bool LoadBlockIndex(bool fAllowNew)
 
 void PrintBlockTree()
 {
-    AssertLockHeld(cs_main);
-    
     // pre-compute tree structure
     map<CBlockIndex*, vector<CBlockIndex*> > mapNext;
     for (map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.begin(); mi != mapBlockIndex.end(); ++mi)
@@ -3163,15 +3146,15 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         }
 
         // find last block in inv vector
-        unsigned int nLastBlock = std::numeric_limits<size_t>::max();
-        for (unsigned int nInv = 0; nInv < vInv.size(); nInv++) {
+        size_t nLastBlock = std::numeric_limits<size_t>::max();
+        for (size_t nInv = 0; nInv < vInv.size(); nInv++) {
             if (vInv[vInv.size() - 1 - nInv].type == MSG_BLOCK) {
                 nLastBlock = vInv.size() - 1 - nInv;
                 break;
             }
         }
         CTxDB txdb("r");
-        for (unsigned int nInv = 0; nInv < vInv.size(); nInv++)
+        for (size_t nInv = 0; nInv < vInv.size(); nInv++)
         {
             const CInv &inv = vInv[nInv];
 

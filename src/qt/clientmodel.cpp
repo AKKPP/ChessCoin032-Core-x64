@@ -25,20 +25,10 @@ ClientModel::ClientModel(OptionsModel *optionsModel, QObject *parent) :
     QObject(parent), optionsModel(optionsModel),
     cachedNumBlocks(0),
     cachedNumBlocksOfPeers(0),
-#ifdef TIMERMODE
-    pollTimer(0)
-#else
     pollThread(new QThread(this))
-#endif
 {
     numBlocksAtStartup = -1;
 
-#ifdef TIMERMODE
-    pollTimer = new QTimer(this);
-    pollTimer->setInterval(MODEL_UPDATE_DELAY);
-    pollTimer->start();
-    connect(pollTimer, SIGNAL(timeout()), this, SLOT(updateTimer()));
-#else
     QTimer* timer = new QTimer;
     timer->setInterval(MODEL_UPDATE_DELAY);
 
@@ -52,7 +42,6 @@ ClientModel::ClientModel(OptionsModel *optionsModel, QObject *parent) :
         {
             cachedNumBlocks = newNumBlocks;
             cachedNumBlocksOfPeers = newNumBlocksOfPeers;
-
             emit numBlocksChanged(newNumBlocks, newNumBlocksOfPeers);
         }
 
@@ -64,7 +53,6 @@ ClientModel::ClientModel(OptionsModel *optionsModel, QObject *parent) :
     // move timer to thread so that polling doesn't disturb main event loop
     timer->moveToThread(pollThread);
     pollThread->start();
-#endif
 
     subscribeToCoreSignals();
 }
@@ -73,10 +61,8 @@ ClientModel::~ClientModel()
 {
     unsubscribeFromCoreSignals();
 
-#ifndef TIMERMODE
     pollThread->quit();
     pollThread->wait();
-#endif
 }
 
 int ClientModel::getNumConnections(uint8_t flags) const
@@ -122,33 +108,6 @@ QDateTime ClientModel::getLastBlockDate() const
     else
         return QDateTime::fromTime_t(1465133106); // Genesis block's time
 }
-
-#ifdef TIMERMODE
-void ClientModel::updateTimer()
-{
-    // Get required lock upfront. This avoids the GUI from getting stuck on
-    // periodical polls if the core is holding the locks for a longer time -
-    // for example, during a wallet rescan.
-    TRY_LOCK(cs_main, lockMain);
-    if(!lockMain)
-        return;
-
-    // Some quantities (such as number of blocks) change so fast that we don't want to be notified for each change.
-    // Periodically check and update with a timer.
-    int newNumBlocks = getNumBlocks();
-    int newNumBlocksOfPeers = getNumBlocksOfPeers();
-
-    if(cachedNumBlocks != newNumBlocks || cachedNumBlocksOfPeers != newNumBlocksOfPeers)
-    {
-        cachedNumBlocks = newNumBlocks;
-        cachedNumBlocksOfPeers = newNumBlocksOfPeers;
-
-        emit numBlocksChanged(newNumBlocks, newNumBlocksOfPeers);
-    }
-
-    emit bytesChanged(getTotalBytesRecv(), getTotalBytesSent());
-}
-#endif
 
 void ClientModel::updateNumConnections(int numConnections)
 {
@@ -232,6 +191,7 @@ QString ClientModel::formatClientStartupTime() const
 {
     return QDateTime::fromTime_t(nClientStartupTime).toString();
 }
+
 
 // Handlers for core signals
 static void NotifyBlocksChanged(ClientModel *clientmodel)
