@@ -847,7 +847,11 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate)
 
     CBlockIndex* pindex = pindexStart;
     {
+#ifdef MAINLOCK
         LOCK2(cs_main, cs_wallet);
+#else
+        LOCK(cs_wallet);
+#endif
         while (pindex)
         {
             // no need to read and scan block, if block was created before
@@ -876,7 +880,11 @@ void CWallet::ReacceptWalletTransactions()
     bool fRepeat = true;
     while (fRepeat)
     {
+#ifdef MAINLOCK
         LOCK2(cs_main, cs_wallet);
+#else
+        LOCK(cs_wallet);
+#endif
         fRepeat = false;
         vector<CDiskTxPos> vMissingTx;
         BOOST_FOREACH(PAIRTYPE(const uint256, CWalletTx)& item, mapWallet)
@@ -1019,7 +1027,11 @@ int64_t CWallet::GetBalance() const
 {
     int64_t nTotal = 0;
     {
+#ifdef MAINLOCK
         LOCK2(cs_main, cs_wallet);
+#else
+        LOCK(cs_wallet);
+#endif
         for (map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
         {
             const CWalletTx* pcoin = &(*it).second;
@@ -1044,7 +1056,11 @@ int64_t CWallet::GetUnconfirmedBalance() const
 {
     int64_t nTotal = 0;
     {
+#ifdef MAINLOCK
         LOCK2(cs_main, cs_wallet);
+#else
+        LOCK(cs_wallet);
+#endif
         for (map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
         {
             const CWalletTx* pcoin = &(*it).second;
@@ -1059,7 +1075,11 @@ int64_t CWallet::GetImmatureBalance() const
 {
     int64_t nTotal = 0;
     {
+#ifdef MAINLOCK
         LOCK2(cs_main, cs_wallet);
+#else
+        LOCK(cs_wallet);
+#endif
         for (map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
         {
             const CWalletTx& pcoin = (*it).second;
@@ -1076,7 +1096,11 @@ void CWallet::AvailableCoins(vector<COutput>& vCoins, bool fOnlyConfirmed, const
     vCoins.clear();
 
     {
+#ifdef MAINLOCK
         LOCK2(cs_main, cs_wallet);
+#else
+        LOCK(cs_wallet);
+#endif
 
         for (auto it = mapWallet.begin(); it != mapWallet.end(); ++it)
         {
@@ -1125,7 +1149,11 @@ void CWallet::AvailableCoinsForStaking(vector<COutput>& vCoins, unsigned int nSp
     vCoins.clear();
 
     {
+#ifdef MAINLOCK
         LOCK2(cs_main, cs_wallet);
+#else
+        LOCK(cs_wallet);
+#endif
 
         for (auto it = mapWallet.begin(); it != mapWallet.end(); ++it)
         {
@@ -1201,7 +1229,13 @@ static void ApproximateBestSubset(vector<pair<int64_t, pair<const CWalletTx*,uns
 int64_t CWallet::GetStake() const
 {
     int64_t nTotal = 0;
-    LOCK2(cs_main, cs_wallet);
+
+#ifdef MAINLOCK
+        LOCK2(cs_main, cs_wallet);
+#else
+        LOCK(cs_wallet);
+#endif
+
     for (map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
     {
         const CWalletTx* pcoin = &(*it).second;
@@ -1214,7 +1248,13 @@ int64_t CWallet::GetStake() const
 int64_t CWallet::GetNewMint() const
 {
     int64_t nTotal = 0;
-    LOCK2(cs_main, cs_wallet);
+
+#ifdef MAINLOCK
+        LOCK2(cs_main, cs_wallet);
+#else
+        LOCK(cs_wallet);
+#endif
+
     for (map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
     {
         const CWalletTx* pcoin = &(*it).second;
@@ -1406,7 +1446,11 @@ bool CWallet::CreateTransaction(const vector<pair<CScript, int64_t> >& vecSend, 
     wtxNew.BindWallet(this);
 
     {
+#ifdef MAINLOCK
         LOCK2(cs_main, cs_wallet);
+#else
+        LOCK(cs_wallet);
+#endif
         // txdb must be opened before the mapWallet lock
         CTxDB txdb("r");
         {
@@ -1557,7 +1601,11 @@ bool CWallet::GetStakeWeight(const CKeyStore& keystore, uint64_t& nMinWeight, ui
     {
         CTxIndex txindex;
         {
-            LOCK2(cs_main, cs_wallet);
+#ifdef MAINLOCK
+        LOCK2(cs_main, cs_wallet);
+#else
+        LOCK(cs_wallet);
+#endif
             if (!txdb.ReadTxIndex(pcoin.first->GetHash(), txindex))
                 continue;
         }
@@ -1626,7 +1674,11 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
     {
         CTxIndex txindex;
         {
-            LOCK2(cs_main, cs_wallet);
+#ifdef MAINLOCK
+        LOCK2(cs_main, cs_wallet);
+#else
+        LOCK(cs_wallet);
+#endif
             if (!txdb.ReadTxIndex(pcoin.first->GetHash(), txindex))
                 continue;
         }
@@ -1634,7 +1686,11 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
         // Read block header
         CBlock block;
         {
-            LOCK2(cs_main, cs_wallet);
+#ifdef MAINLOCK
+        LOCK2(cs_main, cs_wallet);
+#else
+        LOCK(cs_wallet);
+#endif
             if (!block.ReadFromDisk(txindex.pos.nFile, txindex.pos.nBlockPos, false))
                 continue;
         }
@@ -1802,7 +1858,11 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
 bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey)
 {
     {
+#ifdef MAINLOCK
         LOCK2(cs_main, cs_wallet);
+#else
+        LOCK(cs_wallet);
+#endif
         printf("CommitTransaction:\n%s", wtxNew.ToString().c_str());
         {
             // This is only to keep the database open to defeat the auto-flush for the
@@ -2108,7 +2168,11 @@ void CWallet::ReserveKeyFromKeyPool(int64_t& nIndex, CKeyPool& keypool)
 int64_t CWallet::AddReserveKey(const CKeyPool& keypool)
 {
     {
+#ifdef MAINLOCK
         LOCK2(cs_main, cs_wallet);
+#else
+        LOCK(cs_wallet);
+#endif
         CWalletDB walletdb(strWalletFile);
 
         int64_t nIndex = 1 + *(--setKeyPool.end());
@@ -2416,7 +2480,11 @@ void CWallet::GetAllReserveKeys(set<CKeyID>& setAddress) const
 
     CWalletDB walletdb(strWalletFile);
 
-    LOCK2(cs_main, cs_wallet);
+#ifdef MAINLOCK
+        LOCK2(cs_main, cs_wallet);
+#else
+        LOCK(cs_wallet);
+#endif
     BOOST_FOREACH(const int64_t& id, setKeyPool)
     {
         CKeyPool keypool;

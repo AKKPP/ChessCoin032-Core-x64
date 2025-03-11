@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = chesscoin-qt
-VERSION = 1.5.1
+VERSION = 1.5.2
 INCLUDEPATH += src src/json src/qt
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE QT_SUPPORTSSL WAYLANDMODE
 CONFIG += no_include_pwd
@@ -113,10 +113,9 @@ contains(BITCOIN_NEED_QT_PLUGINS, 1) {
 
 contains(USE_UPNP, 1) {
     message(Building with miniupnpc support)
-    INCLUDEPATHS += -I"/usr/include/miniupnpc"
-    MINIUPNPC_LIB_PATH=/usr/lib
+    INCLUDEPATHS += -I"/usr/local/include/miniupnpc"
+    MINIUPNPC_LIB_PATH=/usr/local/lib
     LIBS += $$join(MINIUPNPC_LIB_PATH,,-L,) -lminiupnpc
-    win32:LIBS += -liphlpapi
     DEFS += -DSTATICLIB -DUSE_UPNP=$(USE_UPNP)
 }
 

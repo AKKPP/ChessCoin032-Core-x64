@@ -35,6 +35,7 @@ namespace Checkpoints
         ( 2240000,  std::make_pair(uint256("0x7dfdc94a2b979ccd03176499990f386888a409a1e151fdbad4746a7943265133"), 1679362477) )
         ( 2290000,  std::make_pair(uint256("0x99cdc5366a05609aa9d83b91a8d76ba84d2f6bdd5ae937cee08bbeec72bc0ed7"), 1699838949) )
         ( 2340000,  std::make_pair(uint256("0xa855f4317fffd57bca268e3b588fe0ae490af1976a9582eff4125b50d8881ea7"), 1720021635) )
+        ( 2390000,  std::make_pair(uint256("0x507dc3d62801e4c38992107fd314bfd1060d847e19f4ee156dddccec892c759d"), 1740264417) )
     ;
 
     // TestNet has no checkpoints
@@ -82,7 +83,7 @@ namespace Checkpoints
 
     // ppcoin: synchronized checkpoint (centrally broadcasted)
     uint256 hashSyncCheckpoint("0x8a9cbd23dbbb98c89bbac1f5c91ae24ec06dd9299506943913caed9a32b50393");
-    uint256 hashPendingCheckpoint("0xa855f4317fffd57bca268e3b588fe0ae490af1976a9582eff4125b50d8881ea7");
+    uint256 hashPendingCheckpoint("0x507dc3d62801e4c38992107fd314bfd1060d847e19f4ee156dddccec892c759d");
     CSyncCheckpoint checkpointMessage;
     CSyncCheckpoint checkpointMessagePending;
     uint256 hashInvalidCheckpoint = 0;

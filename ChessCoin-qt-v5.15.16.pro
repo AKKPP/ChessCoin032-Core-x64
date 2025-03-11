@@ -1,15 +1,13 @@
 TEMPLATE = app
 TARGET = chesscoin-qt
-VERSION = 1.5.1
+VERSION = 1.5.2
 INCLUDEPATH += src src/json src/qt
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE QT_SUPPORTSSL __STDC_FORMAT_MACROS __STDC_LIMIT_MACROS
 CONFIG += no_include_pwd
 CONFIG += thread
-CONFIG += static
-CONFIG += staticlib
-CONFIG += release
 CONFIG -= embed_manifest_exe multimedia-wmf
-CONFIG -= shared  # Ensure no shared libs
+CONFIG += static release
+CONFIG += staticlib
 
 QT += core gui network multimedia multimediawidgets
 
@@ -27,6 +25,8 @@ QMAKE_CXXFLAGS_RELEASE += -O1
 QMAKE_CXXFLAGS += -fno-omit-frame-pointer
 
 QMAKE_CXXFLAGS += -std=c++14
+QMAKE_CXXFLAGS += -fPIC
+
 
 # for boost 1.37, add -mt to the boost libraries
 # use: qmake BOOST_LIB_SUFFIX=-mt
@@ -60,6 +60,9 @@ QRDECODE_LIB_PATH=D:/ChessCoinLibs64/qzxing/staticlib
 
 CURL_INCLUDE_PATH=D:/ChessCoinLibs64/curl-8.11.0/include
 CURL_LIB_PATH=D:/ChesscoinLibs64/curl-8.11.0/lib/.libs
+
+MINGW_INCLUDE_PATH=D:/msys64/mingw64/include
+MINGW_LIB_PATH=D:/msys64/mingw64/lib
 
 # use: qmake "RELEASE=1"
 contains(RELEASE, 1) {
@@ -98,12 +101,6 @@ win32:QMAKE_LFLAGS *= -Wl,--dynamicbase -Wl,--nxcompat
 #QMAKE_LFLAGS_RELEASE -= -Wl,-s
 #QMAKE_CXXFLAGS_RELEASE += $$QMAKE_CFLAGS_RELEASE_WITH_DEBUGINFO
 #QMAKE_LFLAGS_RELEASE += $$QMAKE_LFLAGS_RELEASE_WITH_DEBUGINFO
-
-QMAKE_LFLAGS += -static -static-libgcc -static-libstdc++
-LIBS += -static -static-libgcc -static-libstdc++
-
-# Prevent linking against dynamic runtime
-QMAKE_CXXFLAGS += -D_STATIC
 
 # use: qmake "USE_QRCODE=1"
 # libqrencode (http://fukuchi.org/works/qrencode/index.en.html) must be installed for support
@@ -317,9 +314,9 @@ HEADERS += src/qt/bitcoingui.h \
     src/memusage.h \
     src/qt/burncoinsentry.h \
     src/qt/burncoinsdialog.h \
-	src/qt/blockbrowser.h \
-	src/qt/sendtimelockdialog.h \
-	src/qt/calctimestampdlg.h
+    src/qt/blockbrowser.h \
+    src/qt/sendtimelockdialog.h \
+    src/qt/calctimestampdlg.h
 
 SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/intro.cpp \
@@ -390,9 +387,9 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/chatworker.cpp \
     src/qt/burncoinsentry.cpp \
     src/qt/burncoinsdialog.cpp \
-	src/qt/blockbrowser.cpp \
-	src/qt/sendtimelockdialog.cpp \
-	src/qt/calctimestampdlg.cpp \
+    src/qt/blockbrowser.cpp \
+    src/qt/sendtimelockdialog.cpp \
+    src/qt/calctimestampdlg.cpp \
     src/noui.cpp \
     src/kernel.cpp \
     src/scrypt-arm.S \
@@ -472,35 +469,46 @@ OTHER_FILES += \
 windows:DEFINES += WIN32
 windows:RC_FILE = src/qt/res/bitcoin-qt.rc
 
-windows:!contains(MINGW_THREAD_BUGFIX, 0) {
-    # At least qmake's win32-g++-cross profile is missing the -lmingwthrd
-    # thread-safety flag. GCC has -mthreads to enable this, but it doesn't
-    # work with static linking. -lmingwthrd must come BEFORE -lmingw, so
-    # it is prepended to QMAKE_LIBS_QT_ENTRY.
-    # It can be turned off with MINGW_THREAD_BUGFIX=0, just in case it causes
-    # any problems on some untested qmake profile now or in the future.
+#windows:!contains(MINGW_THREAD_BUGFIX, 0) {
+#    # At least qmake's win32-g++-cross profile is missing the -lmingwthrd
+#    # thread-safety flag. GCC has -mthreads to enable this, but it doesn't
+#    # work with static linking. -lmingwthrd must come BEFORE -lmingw, so
+#    # it is prepended to QMAKE_LIBS_QT_ENTRY.
+#    # It can be turned off with MINGW_THREAD_BUGFIX=0, just in case it causes
+#    # any problems on some untested qmake profile now or in the future.
 
-    DEFINES += _MT BOOST_THREAD_PROVIDES_GENERIC_SHARED_MUTEX_ON_WIN
-    QMAKE_LIBS_QT_ENTRY = -lmingwthrd $$QMAKE_LIBS_QT_ENTRY
-}
+#    DEFINES += _MT BOOST_THREAD_PROVIDES_GENERIC_SHARED_MUTEX_ON_WIN
+#    QMAKE_LIBS_QT_ENTRY = -lmingwthrd $$QMAKE_LIBS_QT_ENTRY
+#}
+
 
 # Set libraries and includes at end, to use platform-defined defaults if not overridden
-INCLUDEPATH += $$BOOST_INCLUDE_PATH $$BDB_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$QRENCODE_INCLUDE_PATH $$QRDECODE_INCLUDE_PATH $$CURL_INCLUDE_PATH
+INCLUDEPATH += $$BOOST_INCLUDE_PATH $$BDB_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$QRENCODE_INCLUDE_PATH $$QRDECODE_INCLUDE_PATH $$MINGW_INCLUDE_PATH
 DEPENDPATH += $$BOOST_LIB_PATH
 
 LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(BDB_LIB_PATH,,-L,) $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,) $$join(QRDECODE_LIB_PATH,,-L,)
 LIBS +=  -lssl -lcrypto -ldb_cxx
 
-#LIBS += $$join(CURL_LIB_PATH,,-L,)
-#LIBS += -lcurl
+
+QMAKE_LFLAGS += -static -static-libgcc -static-libstdc++ -Wl,-Bstatic -lpthread -Wl,-Bdynamic
+QMAKE_CXXFLAGS += -static -static-libgcc -static-libstdc++
+LIBS += -Wl,-Bstatic -lpthread -Wl,-Bdynamic
+
 
 # -lgdi32 has to happen after -lcrypto (see  #681)
 windows:LIBS += -lws2_32 -lshlwapi -lmswsock -lole32 -loleaut32 -luuid -lgdi32
 
 LIBS += -lboost_system$$BOOST_LIB_SUFFIX -lboost_filesystem$$BOOST_LIB_SUFFIX  -lboost_program_options$$BOOST_LIB_SUFFIX -lboost_thread$$BOOST_LIB_SUFFIX libboost_chrono$$BOOST_LIB_SUFFIX
-LIBS += -Wl,-Bstatic -lpthread -Wl,-Bdynamic
 
-LIBS += -lQZXing -liconv
+# LIBS += -lQZXing -liconv
+LIBS += -lQZXing
+
+LIBS += $$join(MINGW_LIB_PATH,,-L,)
+DEPENDPATH += $$MINGW_LIB_PATH
+
+LIBS += -Wl,-Bstatic -liconv -lzstd -Wl,-Bdynamic
+# Add any MinGW static libraries
+LIBS += -Wl,-Bstatic -lwinpthread -lstdc++ -lgcc -Wl,-Bdynamic
 
 contains(RELEASE, 1) {
     !windows:!macx {

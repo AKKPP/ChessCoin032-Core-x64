@@ -178,12 +178,12 @@ int main(int argc, char *argv[])
 
     // Application identification (must be set before OptionsModel is initialized,
     // as it is used to locate QSettings)
-    app.setOrganizationName("ChessCoin");
+    app.setOrganizationName("chesscoin");
     app.setOrganizationDomain("chesscoin032.com");
     if(GetBoolArg("-testnet")) // Separate UI settings for testnet
-        app.setApplicationName("ChessCoin-Qt-testnet");
+        app.setApplicationName("chesscoin-qt-testnet");
     else
-        app.setApplicationName("ChessCoin-Qt");
+        app.setApplicationName("chesscoin-qt");
 
     QFile f(":qdarkstyle/dark/darkstyle.qss");
     if (f.exists()) {
