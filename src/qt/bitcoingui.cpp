@@ -92,9 +92,6 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     optionsDialog(0),
     nWeight(0)
 {
-    //QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-    QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
-
 #ifdef Q_OS_WIN
     resize(920, 610);
     setMinimumSize(920, 610);
@@ -108,12 +105,12 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 
     setWindowTitle(tr("ChessCoin 0.32% - Wallet"));
 
-#ifndef Q_OS_MAC
-    qApp->setWindowIcon(QIcon(":icons/bitcoin"));
-    setWindowIcon(QIcon(":icons/bitcoin"));
-#else
+#if defined Q_OS_MAC
     //setUnifiedTitleAndToolBarOnMac(true);
     QApplication::setAttribute(Qt::AA_DontShowIconsInMenus);
+#else
+    qApp->setWindowIcon(QIcon(":icons/bitcoin"));
+    setWindowIcon(QIcon(":icons/bitcoin"));
 #endif
 
 

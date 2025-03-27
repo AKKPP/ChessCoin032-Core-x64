@@ -1,8 +1,8 @@
 TEMPLATE = app
 TARGET = chesscoin-qt
-VERSION = 1.5.1
+VERSION = 1.5.2
 INCLUDEPATH += src src/json src/qt
-DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE __STDC_FORMAT_MACROS __STDC_LIMIT_MACROS QT_SUPPORTSSL
+DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE __STDC_FORMAT_MACROS __STDC_LIMIT_MACROS QT_SUPPORTSSL WAYLANDMODE
 CONFIG += no_include_pwd
 CONFIG += thread
 CONFIG += static
@@ -38,8 +38,8 @@ BOOST_LIB_PATH=/usr/local/boost.1.77.0/lib
 BDB_INCLUDE_PATH=/usr/local/berkeleydb.6.0.20/include
 BDB_LIB_PATH=/usr/local/berkeleydb.6.0.20/lib
 
-OPENSSL_INCLUDE_PATH=/usr/local/ssl.1.1.1/include
-OPENSSL_LIB_PATH=/usr/local/ssl.1.1.1/lib
+OPENSSL_INCLUDE_PATH=/usr/local/ssl.3.4.0/include
+OPENSSL_LIB_PATH=/usr/local/ssl.3.4.0/lib
 
 QRENCODE_INCLUDE_PATH=/usr/local/qrencode.4.1.1/include
 QRENCODE_LIB_PATH=/usr/local/qrencode.4.1.1/lib

@@ -159,6 +159,37 @@ static void handleRunawayException(std::exception *e)
     exit(1);
 }
 
+#ifdef WAYLANDMODE
+static bool copyIconToLocalShare(const QString& iconpath) {
+    std::string source = iconpath.toStdString();  // Source path inside AppImage
+
+    // Get the user's home directory
+    const char* homeDir = std::getenv("HOME");
+    if (!homeDir) {
+        return false;
+    }
+
+    std::string destDir = std::string(homeDir) + "/.local/share/icons/hicolor/256x256/apps";
+    std::string destination = destDir + "/chesscoin-qt.png"; // Destination path in the user's home
+
+    try {
+        boost::filesystem::create_directories(destDir); // Ensure the directory exists
+
+        // Check if the icon already exists at the destination
+        if (!boost::filesystem::exists(destination)) {
+            // Copy the icon file, overwriting if it already exists
+            boost::filesystem::copy_file(source, destination, boost::filesystem::copy_option::overwrite_if_exists);
+            // Update the icon cache
+            std::system("gtk-update-icon-cache ~/.local/share/icons/hicolor");
+        }
+
+        return true;
+    } catch (const std::exception &e) {
+        return false;
+    }
+}
+#endif
+
 #ifndef BITCOIN_QT_TEST
 int main(int argc, char *argv[])
 {
@@ -173,6 +204,9 @@ int main(int argc, char *argv[])
     QTextCodec::setCodecForCStrings(QTextCodec::codecForTr());
 #endif
 
+    QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+    QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
+
     Q_INIT_RESOURCE(bitcoin);
     QApplication app(argc, argv);
 
@@ -184,6 +218,25 @@ int main(int argc, char *argv[])
         app.setApplicationName("chesscoin-qt-testnet");
     else
         app.setApplicationName("chesscoin-qt");
+
+#ifdef WAYLANDMODE
+    QString iconPaths[] = {
+        QApplication::applicationDirPath() + "/../share/icons/hicolor/256x256/apps/chesscoin-qt.png",
+        QApplication::applicationDirPath() + "/../share/pixmaps/chesscoin-qt.png",
+        QApplication::applicationDirPath() + "/chesscoin-qt.png"
+    };
+
+    for (const QString &path : iconPaths) {
+        if (QFile::exists(path)) {
+            copyIconToLocalShare(path);
+            break;
+        }
+    }
+
+    // Set the desktop file name
+    app.setDesktopFileName("chesscoin-qt.desktop");
+#endif
+
 
     QFile f(":qdarkstyle/dark/darkstyle.qss");
     if (f.exists()) {
@@ -240,6 +293,7 @@ int main(int argc, char *argv[])
     QSplashScreen splash(QPixmap(":/images/splash"), 0);
     if (GetBoolArg("-splash", true) && !GetBoolArg("-min"))
     {
+        splash.setWindowTitle("ChessCoin 0.32%");
         splash.show();
         splash.setAutoFillBackground(true);
         splashref = &splash;
